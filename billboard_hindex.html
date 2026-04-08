@@ -417,6 +417,14 @@ function spreadLabels(pts, minGap, yMin, yMax) {
   }
 }
 
+// ── Measure text width via canvas ────────────────────────────────────────────
+const _textCanvas = document.createElement('canvas');
+function textWidth(str, font) {
+  const ctx = _textCanvas.getContext('2d');
+  ctx.font = font;
+  return ctx.measureText(str).width;
+}
+
 // ── Build one Plotly chart ────────────────────────────────────────────────────
 function createPlot(divId, curves, yLabel, chartSize) {
   Plotly.purge(divId);
@@ -507,7 +515,7 @@ function createPlot(divId, curves, yLabel, chartSize) {
     annotations,
     hovermode: 'closest',
     plot_bgcolor: col.bg, paper_bgcolor: col.bg,
-    margin: {t: 15, b: 58, l: 210, r: 15},
+    margin: {t: 15, b: 58, l: Math.round(Math.max(...curves.map(c => textWidth(c.artist, '11px Georgia, serif'))) + 32), r: 15},
     font: {family: 'Georgia, serif', size: 11, color: col.font}
   }, {responsive: true, displayModeBar: false});
 }

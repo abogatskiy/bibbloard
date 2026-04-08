@@ -1,5 +1,6 @@
 # Secrets and tokens
 .env
+x-rapidapi-key.txt
 portainer_access_token.txt
 github_token.txt
 .mcp.json
@@ -10,9 +11,8 @@ CLAUDE.md
 DEPLOYMENT.md
 deploy.sh
 
-# Large raw data files — downloaded automatically by billboard_hindex.py
-data/all.json
-data/*.csv
+# Large raw data files — live in raw/ (downloaded/scraped locally)
+raw/
 
 # Generated CSVs
 billboard_hindex_weeks.csv
