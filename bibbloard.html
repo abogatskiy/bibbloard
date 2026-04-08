@@ -423,14 +423,51 @@ function textWidth(str, font) {
   return ctx.measureText(str).width;
 }
 
+// ── Helpers for expanded-artist highlights ────────────────────────────────────
+function getExpandedArtistNames() {
+  const names = new Set();
+  for (const key of _expandedArtists) names.add(key.split('|')[0]);
+  return names;
+}
+
+// Maps divId → { artistName → lineTraceIndex } — populated by createPlot
+const _traceIndex = {};
+
+function highlightArtistInPlots(artist, on) {
+  for (const divId of ['weeks-plot', 'peak-plot']) {
+    const map = _traceIndex[divId];
+    if (!map || !(artist in map)) continue;
+    const idx = map[artist];
+    const isExpanded = getExpandedArtistNames().has(artist);
+    // On hover: always go to 4.5; on mouseout: restore to expanded or normal width
+    const w = on ? 4.5 : (isExpanded ? 4.5 : 2.2);
+    Plotly.restyle(divId, {'line.width': w}, [idx]);
+  }
+}
+
 // ── Build one Plotly chart ────────────────────────────────────────────────────
 function createPlot(divId, curves, yLabel, chartSize) {
   Plotly.purge(divId);
   if (!curves.length) return;
 
-  const col    = plotColors();
-  const traces = [];
+  const col         = plotColors();
+  const traces      = [];
   const annotations = [];
+  const highlighted = getExpandedArtistNames();
+
+  // Inject highlighted artists that aren't already in the visible top-N curves
+  if (highlighted.size && _currentData) {
+    const inCurves = new Set(curves.map(c => c.artist));
+    const fullData = divId === 'weeks-plot' ? _currentData.weeks : _currentData.peak;
+    const extras = [];
+    for (const artist of highlighted) {
+      if (!inCurves.has(artist)) {
+        const entry = fullData.find(c => c.artist === artist);
+        if (entry) extras.push(entry);
+      }
+    }
+    if (extras.length) curves = [...curves, ...extras];
+  }
 
   const maxY     = Math.max(...curves.map(c => c.values[0] ?? 0));
   const maxX     = Math.max(...curves.map(c => c.values.length));
@@ -446,14 +483,17 @@ function createPlot(divId, curves, yLabel, chartSize) {
     hoverinfo: 'skip', showlegend: false
   });
 
-  // Artist curves
+  // Artist curves — record trace index for hover highlighting
+  _traceIndex[divId] = {};
   for (const c of curves) {
+    const hl = highlighted.has(c.artist);
+    _traceIndex[divId][c.artist] = traces.length;  // index of this line trace
     const x = c.values.map((_, i) => i + 1);
     const customdata = c.songs.map((s, i) => [s, c.years ? (c.years[i] ?? '') : '']);
     traces.push({
       x, y: c.values,
       mode: 'lines',
-      line: {color: c.color, width: 2.2},
+      line: {color: c.color, width: hl ? 4.5 : 2.2},
       showlegend: false,
       customdata,
       hovertemplate: '<b>' + c.artist + '</b><br><i>%{customdata[0]}</i>' +
@@ -465,11 +505,12 @@ function createPlot(divId, curves, yLabel, chartSize) {
   // H-index markers on diagonal — one trace per artist
   for (const c of curves) {
     if (c.h > 0) {
+      const hl = highlighted.has(c.artist);
       traces.push({
         x: [c.h], y: [c.h],
         mode: 'markers',
-        marker: {color: c.color, size: 10, symbol: 'circle',
-                 line: {color: col.bg, width: 2}},
+        marker: {color: c.color, size: hl ? 14 : 10, symbol: 'circle',
+                 line: {color: col.bg, width: hl ? 3 : 2}},
         showlegend: false,
         hovertemplate: '<b>' + c.artist + '</b><br>h&#8209;index\u00a0=\u00a0' + c.h + '<extra></extra>'
       });
@@ -478,7 +519,8 @@ function createPlot(divId, curves, yLabel, chartSize) {
 
   // Left-edge labels with spreading
   const labelPts = curves
-    .map(c => ({y: c.values[0] ?? 0, yl: c.values[0] ?? 0, artist: c.artist, color: c.color}))
+    .map(c => ({y: c.values[0] ?? 0, yl: c.values[0] ?? 0, artist: c.artist, color: c.color,
+                hl: highlighted.has(c.artist)}))
     .sort((a, b) => b.y - a.y);
   spreadLabels(labelPts, maxY * 0.105, maxY * 0.02, maxY * 0.98);
 
@@ -487,13 +529,13 @@ function createPlot(divId, curves, yLabel, chartSize) {
     annotations.push({
       x: 0, xref: 'paper',
       y: lp.yl, yref: 'y',
-      text: lp.artist,
+      text: lp.hl ? '<b>' + lp.artist + '</b>' : lp.artist,
       showarrow: needsArrow,
       ax: needsArrow ? 1    : undefined, axref: needsArrow ? 'x' : undefined,
       ay: needsArrow ? lp.y : undefined, ayref: needsArrow ? 'y' : undefined,
       arrowhead: 0, arrowwidth: 0.9, arrowcolor: lp.color,
       xanchor: 'right', yanchor: 'middle',
-      font: {color: lp.color, size: 11, family: 'Georgia, serif'}
+      font: {color: lp.color, size: lp.hl ? 13 : 11, family: 'Georgia, serif'}
     });
   }
 
@@ -741,6 +783,7 @@ function toggleArtistTimeline(artist, tableKey) {
   if (_expandedArtists.has(key)) _expandedArtists.delete(key);
   else _expandedArtists.add(key);
   renderTables();
+  redrawPlots();
 }
 
 // Event delegation for artist links (handles names with quotes/special chars)
@@ -754,6 +797,16 @@ document.addEventListener('click', e => {
     _timelineView = viewBtn.dataset.view;
     refreshAllTimelines();
   }
+});
+
+// Hover highlight: thicken curve on mouseover, restore on mouseout
+document.addEventListener('mouseover', e => {
+  const span = e.target.closest('span.artist-link');
+  if (span) highlightArtistInPlots(span.dataset.artist, true);
+});
+document.addEventListener('mouseout', e => {
+  const span = e.target.closest('span.artist-link');
+  if (span) highlightArtistInPlots(span.dataset.artist, false);
 });
 
 // Sigma slider — use event delegation on input events
