@@ -1,0 +1,27 @@
+# Secrets and tokens
+.env
+portainer_access_token.txt
+github_token.txt
+.mcp.json
+
+# Deployment scripts and instructions (contain infra details, stay local)
+.claude/
+CLAUDE.md
+DEPLOYMENT.md
+deploy.sh
+
+# Large raw data files — downloaded automatically by billboard_hindex.py
+data/all.json
+data/*.csv
+
+# Generated CSVs
+billboard_hindex_weeks.csv
+billboard_hindex_peak.csv
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo

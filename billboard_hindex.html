@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bibbloard (Billboard H-Index)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+/* ── Theme tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --bg:        #f7f7f5;
+  --surface:   #ffffff;
+  --border:    #e2e2de;
+  --border-lt: #f0f0ec;
+  --text:      #1a1a1a;
+  --muted:     #888;
+  --accent:    #4e79a7;
+  --thead-bg:  #1a1a1a;
+  --thead-fg:  #ffffff;
+  --hover:     #fafaf8;
+  --input-bg:  #ffffff;
+  --sep:       #e4e4e0;
+  --plot-bg:   #ffffff;
+  --plot-grid: #f0f0ec;
+  --plot-line: #e0e0dc;
+  --plot-diag: rgba(60,60,60,0.22);
+  --plot-font: #444444;
+}
+[data-theme="dark"] {
+  --bg:        #18181c;
+  --surface:   #232329;
+  --border:    #363640;
+  --border-lt: #2a2a34;
+  --text:      #e4e4de;
+  --muted:     #7a7a86;
+  --accent:    #6fa3d8;
+  --thead-bg:  #111114;
+  --thead-fg:  #b8b8c4;
+  --hover:     #2a2a34;
+  --input-bg:  #2a2a34;
+  --sep:       #363640;
+  --plot-bg:   #232329;
+  --plot-grid: #2a2a34;
+  --plot-line: #363640;
+  --plot-diag: rgba(200,200,200,0.15);
+  --plot-font: #b0b0bc;
+}
+
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{transition:background .18s,color .18s}
+body{font-family:Georgia,'Times New Roman',serif;background:var(--bg);color:var(--text);line-height:1.55;transition:background .18s,color .18s}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+.wrap{max-width:1300px;margin:0 auto;padding:2.5rem 2rem 4rem}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.site-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.3rem}
+h1{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:3rem;letter-spacing:.04em;line-height:1;font-weight:400}
+.tagline{font-size:.9rem;color:var(--muted);margin:.15rem 0 .55rem;font-style:italic}
+.byline{font-size:.8rem;color:var(--muted);margin-bottom:1.5rem;display:flex;align-items:center;flex-wrap:wrap;gap:.35rem .2rem}
+.byline a{color:var(--accent)}
+.byline .sep{color:var(--border);padding:0 .15rem}
+
+/* Theme toggle */
+.theme-btn{
+  flex-shrink:0;background:none;border:1px solid var(--border);
+  border-radius:999px;padding:.28rem .75rem;
+  font-family:inherit;font-size:.8rem;color:var(--muted);cursor:pointer;
+  display:flex;align-items:center;gap:.35rem;margin-top:.3rem;
+  transition:border-color .15s,color .15s;white-space:nowrap;
+}
+.theme-btn:hover{color:var(--text);border-color:var(--muted)}
+
+/* ── Collapsible about ────────────────────────────────────────────────────── */
+details.about{
+  border:1px solid var(--border);border-radius:4px;
+  background:var(--surface);margin-bottom:2rem;overflow:hidden;
+}
+details.about summary{
+  padding:.6rem 1rem;font-size:.84rem;color:var(--muted);
+  cursor:pointer;user-select:none;
+  list-style:none;display:flex;align-items:center;gap:.4rem;
+}
+details.about summary::-webkit-details-marker{display:none}
+details.about summary::before{
+  content:'▸';font-size:.72rem;color:var(--accent);
+  display:inline-block;transition:transform .2s;
+}
+details[open].about summary::before{transform:rotate(90deg)}
+details.about summary:hover{color:var(--text)}
+.about-body{
+  padding:.9rem 1.3rem 1.1rem;border-top:1px solid var(--border-lt);
+  display:grid;grid-template-columns:1fr 1fr;gap:.8rem 2.5rem;
+  font-size:.83rem;line-height:1.7;
+}
+.about-body h3{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.4rem}
+.about-body p{margin-bottom:.5rem}
+.about-body p:last-child{margin-bottom:0}
+@media(max-width:700px){.about-body{grid-template-columns:1fr}}
+
+/* ── Section label ────────────────────────────────────────────────────────── */
+.section-title{font-size:.75rem;font-weight:bold;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:.65rem}
+
+/* ── Chart selector bar ───────────────────────────────────────────────────── */
+.selector-bar{display:flex;align-items:center;gap:.55rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.selector-bar label{font-size:.84rem;color:var(--muted)}
+.selector-bar select{
+  font-family:inherit;font-size:.86rem;padding:.28rem .6rem;
+  border:1px solid var(--border);border-radius:4px;
+  background:var(--input-bg);cursor:pointer;color:var(--text);
+  transition:border-color .15s;
+}
+.selector-bar select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.selector-bar .sep{color:var(--border)}
+#loading{font-size:.78rem;color:var(--muted);display:none}
+
+/* ── H-H-Index stat box ───────────────────────────────────────────────────── */
+.hhbox{
+  display:flex;background:var(--surface);
+  border:1px solid var(--border);border-left:4px solid var(--accent);
+  border-radius:4px;margin-bottom:2rem;overflow:hidden;
+}
+.hhstat{padding:1rem 1.8rem;border-right:1px solid var(--border-lt)}
+.hhstat .val{font-size:2rem;font-weight:bold;line-height:1;color:var(--text)}
+.hhstat .lbl{font-size:.74rem;color:var(--muted);margin-top:.22rem}
+.hhdesc{padding:1rem 1.4rem;font-size:.8rem;color:var(--muted);align-self:center;line-height:1.65;flex:1}
+.hhdesc strong{color:var(--text)}
+
+/* ── Plots ────────────────────────────────────────────────────────────────── */
+.plots{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:1.5rem;margin-bottom:2rem}
+.plot-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.75rem .75rem .5rem}
+.plot-card h2{font-size:.9rem;padding:0 .25rem .1rem;margin-bottom:.08rem;color:var(--text)}
+.plot-card .desc{font-size:.75rem;color:var(--muted);padding:0 .25rem .4rem}
+.plot-box{width:100%;aspect-ratio:1}
+
+/* ── Tables ───────────────────────────────────────────────────────────────── */
+.tables{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1rem}
+.tbl-card h2{font-size:.88rem;margin-bottom:.65rem;color:var(--text)}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+thead th{
+  background:var(--thead-bg);color:var(--thead-fg);
+  padding:.28rem .6rem;font-weight:normal;
+  font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;text-align:left;
+  white-space:nowrap;
+}
+tbody td{padding:.25rem .6rem;border-bottom:1px solid var(--border-lt);vertical-align:middle;color:var(--text)}
+tbody tr:hover{background:var(--hover)}
+.tr{text-align:right}.dim{color:var(--muted)}.bld{font-weight:bold}
+
+/* Active genre row highlight */
+tr.genre-active > td:first-child::before{content:'›';color:var(--accent);margin-right:.25rem}
+
+/* ── Load more ────────────────────────────────────────────────────────────── */
+.load-more-wrap{text-align:center;margin:1rem 0 2.5rem}
+#load-more-btn{
+  font-family:inherit;font-size:.82rem;padding:.36rem 1.5rem;
+  border:1px solid var(--border);border-radius:4px;
+  background:var(--input-bg);cursor:pointer;color:var(--muted);
+  transition:border-color .15s,color .15s;
+}
+#load-more-btn:hover{border-color:var(--muted);color:var(--text)}
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+footer{margin-top:2rem;font-size:.73rem;color:var(--muted);border-top:1px solid var(--sep);padding-top:1rem;line-height:1.75}
+footer strong{color:var(--text)}
+
+@media(max-width:860px){.plots,.tables{grid-template-columns:1fr}.hhbox{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="site-header">
+    <div>
+      <h1>Bibbloard</h1>
+      <p class="tagline">Billboard H-Index — breadth and longevity, not just chart peaks</p>
+    </div>
+    <button class="theme-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+      <span id="theme-icon">🌙</span><span id="theme-label">Dark</span>
+    </button>
+  </div>
+
+  <p class="byline">
+    Hot&nbsp;100: 3,531 weekly charts (1958&ndash;2026)
+    <span class="sep">&middot;</span>
+    Data: <a href="https://github.com/mhollingshead/billboard-hot-100">mhollingshead/billboard-hot-100</a>
+    <span class="sep">&middot;</span>
+    Genre charts: <a href="https://github.com/pdp2600/chartscraper">pdp2600/chartscraper</a>
+    <span class="sep">&middot;</span>
+    <a href="https://github.com/abogatskiy/bibbloard" title="View source on GitHub"><svg style="vertical-align:middle;margin-right:.2rem" width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+  </p>
+
+  <!-- Collapsible about -->
+  <details class="about">
+    <summary>About this tool</summary>
+    <div class="about-body">
+      <div>
+        <h3>What is the chart h-index?</h3>
+        <p>By analogy with the <a href="https://en.wikipedia.org/wiki/H-index">academic h-index</a>, an artist's chart h-index rewards both breadth and staying power. A single smash hit can't carry you — you need many charting songs, and each one has to hold up.</p>
+        <p><strong>Weeks h-index:</strong> sort your songs by weeks-on-chart, best to worst. Your h-index is the largest <em>h</em> such that at least <em>h</em> of your songs spent at least <em>h</em> weeks on chart.</p>
+        <p><strong>Peak h-index:</strong> same idea, but rank by chart score (= chart size &minus; peak position). A #1 on the Hot 100 scores 99; #50 scores 50. Your peak h-index is the largest <em>h</em> where <em>h</em> songs each scored &ge;&thinsp;<em>h</em>.</p>
+      </div>
+      <div>
+        <h3>What is the h-h-index?</h3>
+        <p>The <strong>h-h-index</strong> of a chart is the h-index of all the individual h-indices — the largest <em>h</em> such that at least <em>h</em> artists each have h-index &ge;&thinsp;<em>h</em>. It measures how deep the chart's artist pool runs overall.</p>
+        <h3>Data coverage</h3>
+        <p>Hot&nbsp;100: 1958&ndash;2026. Genre charts via <a href="https://github.com/pdp2600/chartscraper">chartscraper</a>: Hip-Hop (1958&ndash;2018), Latin (1986&ndash;2018), Pop (1992&ndash;2018), Country (2011&ndash;2018), Rock (2009&ndash;2018), Dance/Electronic (2013&ndash;2018). Weeks counts reflect actual chart appearances in the selected time window, not cumulative weeks-on-chart totals.</p>
+      </div>
+    </div>
+  </details>
+
+  <!-- Genre h-h-index ranking -->
+  <div class="section-title">Genre H-H-Index Ranking</div>
+  <div class="tables" style="margin-bottom:2rem">
+    <div class="tbl-card">
+      <table><thead><tr>
+        <th style="width:2rem" class="tr">#</th>
+        <th>Genre</th>
+        <th style="width:5rem" class="tr">Weeks H-H</th>
+        <th style="width:5rem" class="tr">Peak H-H</th>
+      </tr></thead><tbody id="genre-tbody"></tbody></table>
+    </div>
+    <div class="tbl-card" style="font-size:.8rem;color:var(--muted);padding:1rem 1.2rem;line-height:1.75">
+      <p style="margin-bottom:.6rem">
+        The <strong style="color:var(--text)">h-h-index</strong> of a chart is the largest <em>h</em>
+        such that <em>h</em> artists each have an h-index&nbsp;&ge;&nbsp;<em>h</em> on that chart.
+      </p>
+      <p>Click any row to view that chart. Use the <em>History</em> dropdown below to filter by time window — this table updates accordingly.</p>
+    </div>
+  </div>
+
+  <!-- Chart + period selectors -->
+  <div class="selector-bar">
+    <label for="chart-select">View chart:</label>
+    <select id="chart-select">
+      <option value="hot100">Billboard Hot 100</option>
+      <option value="country">Country</option>
+      <option value="hiphop">Hip-Hop</option>
+      <option value="latin">Latin</option>
+      <option value="pop">Pop</option>
+      <option value="rock">Rock</option>
+      <option value="dance_electronic">Dance / Electronic</option>
+    </select>
+    <span class="sep">&middot;</span>
+    <label for="period-select">History:</label>
+    <select id="period-select">
+      <option value="all">All time</option>
+      <option value="5y">Last 5 years</option>
+      <option value="10y">Last 10 years</option>
+      <option value="15y">Last 15 years</option>
+      <option value="20y">Last 20 years</option>
+      <option value="25y">Last 25 years</option>
+      <option value="30y">Last 30 years</option>
+    </select>
+    <span class="sep">&middot;</span>
+    <label for="n-select">Artists in plot:</label>
+    <select id="n-select">
+      <option value="10">Top 10</option>
+      <option value="20">Top 20</option>
+      <option value="30">Top 30</option>
+    </select>
+    <span id="loading">Loading&hellip;</span>
+  </div>
+
+  <!-- H-H-Index stats (updated per selection) -->
+  <div class="hhbox">
+    <div class="hhstat">
+      <div class="val" id="hhw-val">&mdash;</div>
+      <div class="lbl">Weeks h-h-index</div>
+    </div>
+    <div class="hhstat">
+      <div class="val" id="hhp-val">&mdash;</div>
+      <div class="lbl">Peak h-h-index</div>
+    </div>
+    <div class="hhdesc">
+      The <strong>h-h-index</strong> is the h-index of h-indices &mdash;
+      the largest <em>h</em> such that <em>h</em> artists each have an h-index &ge; <em>h</em>.
+    </div>
+  </div>
+
+  <!-- Plots -->
+  <div class="plots">
+    <div class="plot-card">
+      <h2>Weeks H-Index &mdash; Top <span class="n-label">10</span></h2>
+      <div class="desc"><em>h</em> songs spent &ge;&thinsp;<em>h</em> weeks on chart &middot; hover for details</div>
+      <div id="weeks-plot" class="plot-box"></div>
+    </div>
+    <div class="plot-card">
+      <h2>Peak H-Index &mdash; Top <span class="n-label">10</span></h2>
+      <div class="desc" id="peak-desc"><em>h</em> songs have chart score &ge;&thinsp;<em>h</em> &middot; score&nbsp;=&nbsp;100&thinsp;&minus;&thinsp;peak position &middot; hover for details</div>
+      <div id="peak-plot" class="plot-box"></div>
+    </div>
+  </div>
+
+  <!-- Artist ranking tables -->
+  <div class="tables">
+    <div class="tbl-card">
+      <h2>Weeks H-Index &mdash; Top 50</h2>
+      <table><thead><tr>
+        <th style="width:2rem" class="tr">#</th>
+        <th style="width:2rem" class="tr">H</th>
+        <th style="width:3.2rem" class="tr">Songs</th>
+        <th>Artist</th>
+      </tr></thead><tbody id="weeks-tbody"></tbody></table>
+    </div>
+    <div class="tbl-card">
+      <h2>Peak H-Index &mdash; Top 50</h2>
+      <table><thead><tr>
+        <th style="width:2rem" class="tr">#</th>
+        <th style="width:2rem" class="tr">H</th>
+        <th style="width:3.2rem" class="tr">Songs</th>
+        <th>Artist</th>
+      </tr></thead><tbody id="peak-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- Load more -->
+  <div class="load-more-wrap">
+    <button id="load-more-btn" onclick="loadMore()">Load more</button>
+  </div>
+
+  <footer>
+    <strong>Weeks h-index:</strong> sort songs by weeks-on-chart descending; h&nbsp;= largest rank where weeks&nbsp;&ge;&nbsp;rank. &nbsp;&middot;&nbsp;
+    <strong>Peak h-index:</strong> sort songs by chart score (chart&nbsp;size&nbsp;&minus;&nbsp;peak&nbsp;position) descending; h&nbsp;= largest rank where score&nbsp;&ge;&nbsp;rank. &nbsp;&middot;&nbsp;
+    Each (artist,&nbsp;song) pair is deduplicated; weeks = chart appearances in window, peak = best position in window.
+  </footer>
+</div>
+
+<script>
+// ── Genre summary (inlined — small data) ─────────────────────────────────────
+const GENRE_SUMMARY = [{"genre":"Country","key":"country","periods":{"all":{"hhw":19,"hhp":36},"5y":{"hhw":9,"hhp":11},"10y":{"hhw":14,"hhp":16},"15y":{"hhw":17,"hhp":17},"20y":{"hhw":18,"hhp":20},"25y":{"hhw":19,"hhp":22},"30y":{"hhw":19,"hhp":25}}},{"genre":"Hot 100","key":"hot100","periods":{"all":{"hhw":18,"hhp":35},"5y":{"hhw":9,"hhp":20},"10y":{"hhw":12,"hhp":26},"15y":{"hhw":13,"hhp":28},"20y":{"hhw":16,"hhp":29},"25y":{"hhw":17,"hhp":30},"30y":{"hhw":17,"hhp":30}}},{"genre":"Latin","key":"latin","periods":{"all":{"hhw":16,"hhp":24},"5y":{"hhw":8,"hhp":9},"10y":{"hhw":11,"hhp":12},"15y":{"hhw":13,"hhp":15},"20y":{"hhw":15,"hhp":18},"25y":{"hhw":15,"hhp":22},"30y":{"hhw":16,"hhp":24}}},{"genre":"Hip-Hop","key":"hiphop","periods":{"all":{"hhw":14,"hhp":27},"5y":{"hhw":7,"hhp":12},"10y":{"hhw":9,"hhp":13},"15y":{"hhw":11,"hhp":14},"20y":{"hhw":11,"hhp":15},"25y":{"hhw":12,"hhp":15},"30y":{"hhw":12,"hhp":17}}},{"genre":"Pop","key":"pop","periods":{"all":{"hhw":12,"hhp":13},"5y":{"hhw":6,"hhp":7},"10y":{"hhw":10,"hhp":10},"15y":{"hhw":11,"hhp":12},"20y":{"hhw":11,"hhp":13},"25y":{"hhw":12,"hhp":13},"30y":{"hhw":12,"hhp":13}}},{"genre":"Rock","key":"rock","periods":{"all":{"hhw":10,"hhp":15},"5y":{"hhw":8,"hhp":13},"10y":{"hhw":10,"hhp":15},"15y":{"hhw":10,"hhp":15},"20y":{"hhw":10,"hhp":15},"25y":{"hhw":10,"hhp":15},"30y":{"hhw":10,"hhp":15}}},{"genre":"Dance/Electronic","key":"dance_electronic","periods":{"all":{"hhw":5,"hhp":7},"5y":{"hhw":5,"hhp":6},"10y":{"hhw":5,"hhp":7},"15y":{"hhw":5,"hhp":7},"20y":{"hhw":5,"hhp":7},"25y":{"hhw":5,"hhp":7},"30y":{"hhw":5,"hhp":7}}}];
+
+// ── Dark mode ─────────────────────────────────────────────────────────────────
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const dark = theme === 'dark';
+  document.getElementById('theme-icon').textContent  = dark ? '☀️' : '🌙';
+  document.getElementById('theme-label').textContent = dark ? 'Light' : 'Dark';
+  localStorage.setItem('billboard-theme', theme);
+  if (_currentData) redrawPlots();
+}
+function toggleTheme() {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+// Initialise before first render
+(function(){
+  const saved = localStorage.getItem('billboard-theme');
+  const sys   = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', saved || sys);
+  const dark = (saved || sys) === 'dark';
+  // set button labels — elements exist at parse time since script is at bottom
+  document.getElementById('theme-icon').textContent  = dark ? '☀️' : '🌙';
+  document.getElementById('theme-label').textContent = dark ? 'Light' : 'Dark';
+})();
+
+// Helper: current plot colour tokens from CSS vars
+function plotColors() {
+  const s = getComputedStyle(document.documentElement);
+  return {
+    bg:   s.getPropertyValue('--plot-bg').trim(),
+    grid: s.getPropertyValue('--plot-grid').trim(),
+    line: s.getPropertyValue('--plot-line').trim(),
+    diag: s.getPropertyValue('--plot-diag').trim(),
+    font: s.getPropertyValue('--plot-font').trim(),
+  };
+}
+
+// ── Genre table ───────────────────────────────────────────────────────────────
+function selectChart(key) {
+  document.getElementById('chart-select').value = key;
+  loadChart();
+  document.getElementById('chart-select').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function updateGenreTable(period) {
+  const currentKey = document.getElementById('chart-select').value;
+  const rows = GENRE_SUMMARY.map(g => {
+    const p = g.periods[period] || g.periods['all'];
+    return {genre: g.genre, key: g.key, hhw: p.hhw, hhp: p.hhp};
+  }).sort((a, b) => b.hhw - a.hhw || b.hhp - a.hhp);
+  const tbody = document.getElementById('genre-tbody');
+  tbody.innerHTML = '';
+  rows.forEach((g, i) => {
+    const active = g.key === currentKey ? ' class="genre-active"' : '';
+    tbody.insertAdjacentHTML('beforeend',
+      `<tr${active} onclick="selectChart('${g.key}')" style="cursor:pointer" title="View ${g.genre} chart">` +
+      `<td class="tr dim">${i+1}</td><td>${g.genre}</td>` +
+      `<td class="tr bld">${g.hhw}</td><td class="tr bld">${g.hhp}</td></tr>`);
+  });
+}
+updateGenreTable('all');
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let _currentData  = null;
+let _tableOffset  = 50;
+const TABLE_STEP  = 50;
+
+// ── Label spreading (greedy top-down) ─────────────────────────────────────────
+function spreadLabels(pts, minGap, yMin, yMax) {
+  const n = pts.length;
+  const avail = yMax - yMin;
+  if (minGap * (n - 1) > avail) minGap = avail / Math.max(n - 1, 1);
+  pts[0].yl = Math.min(pts[0].y, yMax);
+  for (let i = 1; i < n; i++)
+    pts[i].yl = Math.min(pts[i].y, pts[i-1].yl - minGap);
+  if (pts[n-1].yl < yMin) {
+    const shift = yMin - pts[n-1].yl;
+    pts.forEach(p => p.yl += shift);
+  }
+}
+
+// ── Build one Plotly chart ────────────────────────────────────────────────────
+function createPlot(divId, curves, yLabel, chartSize) {
+  Plotly.purge(divId);
+  if (!curves.length) return;
+
+  const col    = plotColors();
+  const traces = [];
+  const annotations = [];
+
+  const maxY     = Math.max(...curves.map(c => c.values[0] ?? 0));
+  const maxX     = Math.max(...curves.map(c => c.values.length));
+  const scoreRange = chartSize || maxY;
+  const xClip    = maxX < scoreRange * 0.4 ? scoreRange + 5 : Math.min(maxX + 4, scoreRange + 5);
+  const diagEnd  = xClip;
+
+  // Diagonal y = x
+  traces.push({
+    x: [0, diagEnd], y: [0, diagEnd],
+    mode: 'lines',
+    line: {color: col.diag, dash: 'dot', width: 1.5},
+    hoverinfo: 'skip', showlegend: false
+  });
+
+  // Artist curves
+  for (const c of curves) {
+    const x = c.values.map((_, i) => i + 1);
+    traces.push({
+      x, y: c.values,
+      mode: 'lines',
+      line: {color: c.color, width: 2.2},
+      showlegend: false,
+      customdata: c.songs,
+      hovertemplate: '<b>' + c.artist + '</b><br><i>%{customdata}</i><br>' +
+                     '#%{x} \u00b7 ' + yLabel + ': %{y}<extra></extra>'
+    });
+  }
+
+  // H-index markers on diagonal — one trace per artist
+  for (const c of curves) {
+    if (c.h > 0) {
+      traces.push({
+        x: [c.h], y: [c.h],
+        mode: 'markers',
+        marker: {color: c.color, size: 10, symbol: 'circle',
+                 line: {color: col.bg, width: 2}},
+        showlegend: false,
+        hovertemplate: '<b>' + c.artist + '</b><br>h&#8209;index\u00a0=\u00a0' + c.h + '<extra></extra>'
+      });
+    }
+  }
+
+  // Left-edge labels with spreading
+  const labelPts = curves
+    .map(c => ({y: c.values[0] ?? 0, yl: c.values[0] ?? 0, artist: c.artist, color: c.color}))
+    .sort((a, b) => b.y - a.y);
+  spreadLabels(labelPts, maxY * 0.105, maxY * 0.02, maxY * 0.98);
+
+  for (const lp of labelPts) {
+    const needsArrow = Math.abs(lp.yl - lp.y) > 0.5;
+    annotations.push({
+      x: 0, xref: 'paper',
+      y: lp.yl, yref: 'y',
+      text: lp.artist,
+      showarrow: needsArrow,
+      ax: needsArrow ? 1    : undefined, axref: needsArrow ? 'x' : undefined,
+      ay: needsArrow ? lp.y : undefined, ayref: needsArrow ? 'y' : undefined,
+      arrowhead: 0, arrowwidth: 0.9, arrowcolor: lp.color,
+      xanchor: 'right', yanchor: 'middle',
+      font: {color: lp.color, size: 11, family: 'Georgia, serif'}
+    });
+  }
+
+  Plotly.newPlot(divId, traces, {
+    xaxis: {
+      title: {text: 'Songs ranked by metric (best \u2192 worst)', standoff: 8, font:{color:col.font}},
+      range: [1, xClip],
+      showgrid: true, gridcolor: col.grid,
+      zeroline: false, showline: true, linecolor: col.line,
+      tickfont: {color: col.font}, titlefont: {color: col.font},
+    },
+    yaxis: {
+      title: {text: yLabel, standoff: 8, font:{color:col.font}},
+      range: [0, maxY * 1.07],
+      showgrid: true, gridcolor: col.grid,
+      zeroline: false, showline: true, linecolor: col.line,
+      tickfont: {color: col.font}, titlefont: {color: col.font},
+    },
+    annotations,
+    hovermode: 'closest',
+    plot_bgcolor: col.bg, paper_bgcolor: col.bg,
+    margin: {t: 15, b: 58, l: 210, r: 15},
+    font: {family: 'Georgia, serif', size: 11, color: col.font}
+  }, {responsive: true, displayModeBar: false});
+}
+
+// ── Table rendering ───────────────────────────────────────────────────────────
+function fillTableRows(id, rows) {
+  const tbody = document.getElementById(id);
+  tbody.innerHTML = '';
+  for (const [rank, artist, h, n] of rows) {
+    tbody.insertAdjacentHTML('beforeend',
+      `<tr><td class="tr dim">${rank}</td><td class="tr bld">${h}</td>` +
+      `<td class="tr dim">${n}</td><td>${artist}</td></tr>`);
+  }
+}
+
+function renderTables() {
+  fillTableRows('weeks-tbody', _currentData.weeksTable.slice(0, _tableOffset));
+  fillTableRows('peak-tbody',  _currentData.peakTable.slice(0, _tableOffset));
+  const total = Math.max(_currentData.weeksTable.length, _currentData.peakTable.length);
+  const btn = document.getElementById('load-more-btn');
+  if (_tableOffset >= total) {
+    btn.style.display = 'none';
+  } else {
+    btn.style.display = '';
+    btn.textContent = `Load more (showing ${Math.min(_tableOffset, total)} of ${total})`;
+  }
+}
+
+function loadMore() {
+  _tableOffset += TABLE_STEP;
+  renderTables();
+}
+
+// ── Redraw plots (e.g. on theme change) ───────────────────────────────────────
+function redrawPlots() {
+  const n  = parseInt(document.getElementById('n-select').value);
+  const cs = _currentData.chart_size || 100;
+  createPlot('weeks-plot', _currentData.weeks.slice(0, n), 'Weeks on chart');
+  createPlot('peak-plot',  _currentData.peak.slice(0, n),
+             'Chart score (' + cs + '\u2212peak position)', cs);
+}
+
+// ── Render a full payload ─────────────────────────────────────────────────────
+function renderChart(data) {
+  _currentData  = data;
+  _tableOffset  = TABLE_STEP;
+  document.getElementById('hhw-val').textContent = data.hhw;
+  document.getElementById('hhp-val').textContent = data.hhp;
+  const cs = data.chart_size || 100;
+  document.getElementById('peak-desc').innerHTML =
+    '<em>h</em> songs have chart score &ge;&thinsp;<em>h</em> &middot; score&nbsp;=&nbsp;' +
+    cs + '&thinsp;&minus;&thinsp;peak position &middot; hover for details';
+  redrawPlots();
+  renderTables();
+  updateGenreTable(document.getElementById('period-select').value);
+}
+
+// ── Fetch and render ──────────────────────────────────────────────────────────
+function getDataFile() {
+  const chart  = document.getElementById('chart-select').value;
+  const period = document.getElementById('period-select').value;
+  return period === 'all' ? `data/${chart}.json` : `data/${chart}_${period}.json`;
+}
+
+async function loadChart() {
+  const loading = document.getElementById('loading');
+  loading.style.display = 'inline';
+  try {
+    const resp = await fetch(getDataFile());
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    renderChart(await resp.json());
+  } catch (e) {
+    console.error('Failed to load chart data:', e);
+    alert('Could not load: ' + getDataFile());
+  } finally {
+    loading.style.display = 'none';
+  }
+}
+
+// ── Wiring ────────────────────────────────────────────────────────────────────
+document.getElementById('chart-select').addEventListener('change', loadChart);
+document.getElementById('period-select').addEventListener('change', () => {
+  updateGenreTable(document.getElementById('period-select').value);
+  loadChart();
+});
+document.getElementById('n-select').addEventListener('change', () => {
+  if (!_currentData) return;
+  const n = parseInt(document.getElementById('n-select').value);
+  document.querySelectorAll('.n-label').forEach(el => el.textContent = n);
+  redrawPlots();
+});
+
+loadChart();
+</script>
+</body>
+</html>

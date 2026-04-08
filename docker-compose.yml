@@ -1,0 +1,11 @@
+services:
+  billboard-web:
+    image: ghcr.io/abogatskiy/billboard-web:latest
+    container_name: billboard-web
+    restart: unless-stopped
+    networks:
+      - nginx_proxy-network
+
+networks:
+  nginx_proxy-network:
+    external: true
