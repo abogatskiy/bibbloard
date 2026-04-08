@@ -67,15 +67,15 @@ CHART_KEYS = {
     "Alternative":        "alternative",
 }
 
-# (period_key, years_back) — None means all-time
+# (period_key, since_iso) — since_iso=None means all-time
+# Using absolute calendar years so cross-chart comparisons are fair.
 PERIODS = [
-    ("all", None),
-    ("5y",   5),
-    ("10y", 10),
-    ("15y", 15),
-    ("20y", 20),
-    ("25y", 25),
-    ("30y", 30),
+    ("all",  None),
+    ("2020", "2020-01-01"),
+    ("2015", "2015-01-01"),
+    ("2010", "2010-01-01"),
+    ("2005", "2005-01-01"),
+    ("2000", "2000-01-01"),
 ]
 
 DATA_DIR   = Path("data")
@@ -240,15 +240,7 @@ def compute_rankings(artist_songs: dict, chart_size: int = 100):
     return weeks_ranking, peak_ranking
 
 # ── Date arithmetic ───────────────────────────────────────────────────────────
-
-def compute_since_date(max_date_str: str, years_back) -> str:
-    if years_back is None or not max_date_str:
-        return None
-    d = date.fromisoformat(max_date_str[:10])
-    try:
-        return d.replace(year=d.year - years_back).isoformat()
-    except ValueError:                          # Feb 29 in non-leap year
-        return d.replace(year=d.year - years_back, day=28).isoformat()
+# (No computation needed — periods are absolute ISO date strings or None.)
 
 # ── Console output ─────────────────────────────────────────────────────────────
 
@@ -358,15 +350,14 @@ def main():
 
     print(f"\nGenerating Hot 100 data files … (chart_size={hot100_size})")
     hot100_periods = {}
-    for period_key, years_back in PERIODS:
-        sd           = compute_since_date(hot100_max, years_back)
-        artist_songs = deduplicate_rows(hot100_rows, sd)
+    for period_key, period_since in PERIODS:
+        artist_songs = deduplicate_rows(hot100_rows, period_since)
         cs           = compute_chart_size(artist_songs)
         wr, pr       = compute_rankings(artist_songs, cs)
         hhw          = hh_index(wr)
         hhp          = hh_index(pr)
-        label = "All time" if years_back is None else f"Last {years_back}y"
-        print(f"  {label:12s}: {len(artist_songs):5,} artists  chart_size={cs}  Weeks HH={hhw}  Peak HH={hhp}")
+        label = "All time" if period_since is None else f"Since {period_key}"
+        print(f"  {label:10s}: {len(artist_songs):5,} artists  chart_size={cs}  Weeks HH={hhw}  Peak HH={hhp}")
         hot100_periods[period_key] = {"hhw": hhw, "hhp": hhp}
         fname = "hot100.json" if period_key == "all" else f"hot100_{period_key}.json"
         save_chart_data(build_chart_payload(wr, pr, artist_songs, hhw, hhp, cs), DATA_DIR / fname)
@@ -390,17 +381,16 @@ def main():
         key        = CHART_KEYS[genre_name]
         genre_periods = {}   # period_key -> {hhw, hhp}
 
-        for period_key, years_back in PERIODS:
-            sd           = compute_since_date(genre_max, years_back)
-            artist_songs = deduplicate_rows(genre_rows, sd)
+        for period_key, period_since in PERIODS:
+            artist_songs = deduplicate_rows(genre_rows, period_since)
             if not artist_songs:
                 continue
             cs           = compute_chart_size(artist_songs)
             wr, pr       = compute_rankings(artist_songs, cs)
             hhw          = hh_index(wr)
             hhp          = hh_index(pr)
-            label = "All time" if years_back is None else f"Last {years_back}y"
-            print(f"  {label:12s}: {len(artist_songs):5,} artists  chart_size={cs}  Weeks HH={hhw}  Peak HH={hhp}")
+            label = "All time" if period_since is None else f"Since {period_key}"
+            print(f"  {label:10s}: {len(artist_songs):5,} artists  chart_size={cs}  Weeks HH={hhw}  Peak HH={hhp}")
             genre_periods[period_key] = {"hhw": hhw, "hhp": hhp}
             fname = f"{key}.json" if period_key == "all" else f"{key}_{period_key}.json"
             save_chart_data(build_chart_payload(wr, pr, artist_songs, hhw, hhp, cs), DATA_DIR / fname)

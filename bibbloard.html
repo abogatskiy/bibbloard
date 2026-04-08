@@ -224,6 +224,7 @@ footer strong{color:var(--text)}
       <table><thead><tr>
         <th style="width:2rem" class="tr">#</th>
         <th>Genre</th>
+        <th style="width:5.5rem" class="tr">Coverage</th>
         <th style="width:5rem" class="tr">Weeks H-H</th>
         <th style="width:5rem" class="tr">Peak H-H</th>
       </tr></thead><tbody id="genre-tbody"></tbody></table>
@@ -233,7 +234,8 @@ footer strong{color:var(--text)}
         The <strong style="color:var(--text)">h-h-index</strong> of a chart is the largest <em>h</em>
         such that <em>h</em> artists each have an h-index&nbsp;&ge;&nbsp;<em>h</em> on that chart.
       </p>
-      <p>Click any row to view that chart. Use the <em>History</em> dropdown below to filter by time window — this table updates accordingly.</p>
+      <p>Click any row to view that chart. Use the <em>Since</em> dropdown below to filter by start year.
+        <strong style="color:var(--text)">For cross-chart comparisons, pick a specific year</strong> — the H-H index grows with the amount of data, so "All time" comparisons are misleading when charts have different histories.</p>
     </div>
   </div>
 
@@ -250,15 +252,14 @@ footer strong{color:var(--text)}
       <option value="dance_electronic">Dance / Electronic</option>
     </select>
     <span class="sep">&middot;</span>
-    <label for="period-select">History:</label>
+    <label for="period-select">Since:</label>
     <select id="period-select">
       <option value="all">All time</option>
-      <option value="5y">Last 5 years</option>
-      <option value="10y">Last 10 years</option>
-      <option value="15y">Last 15 years</option>
-      <option value="20y">Last 20 years</option>
-      <option value="25y">Last 25 years</option>
-      <option value="30y">Last 30 years</option>
+      <option value="2020">2020</option>
+      <option value="2015">2015</option>
+      <option value="2010">2010</option>
+      <option value="2005">2005</option>
+      <option value="2000">2000</option>
     </select>
     <span class="sep">&middot;</span>
     <label for="n-select">Artists in plot:</label>
@@ -382,18 +383,31 @@ function selectChart(key) {
 
 function updateGenreTable(period) {
   const currentKey = document.getElementById('chart-select').value;
+  const periodYear = period === 'all' ? 0 : parseInt(period);
+
   const rows = GENRE_SUMMARY.map(g => {
-    const p = g.periods[period] || g.periods['all'];
-    return {genre: g.genre, key: g.key, hhw: p.hhw, hhp: p.hhp};
-  }).sort((a, b) => b.hhw - a.hhw || b.hhp - a.hhp);
+    const p = g.periods[period];
+    const earliestYear = g.earliest ? parseInt(g.earliest) : 0;
+    const latestYear   = g.latest   ? parseInt(g.latest)   : 0;
+    const sinceYear    = period === 'all' ? earliestYear : Math.max(periodYear, earliestYear);
+    const hasData      = !!p && latestYear >= periodYear;
+    const coverage     = hasData ? `${sinceYear}\u2013${latestYear}` : '\u2014';
+    return {genre: g.genre, key: g.key,
+            hhw: hasData ? p.hhw : null, hhp: hasData ? p.hhp : null,
+            coverage};
+  }).sort((a, b) => (b.hhw ?? -1) - (a.hhw ?? -1) || (b.hhp ?? -1) - (a.hhp ?? -1));
+
   const tbody = document.getElementById('genre-tbody');
   tbody.innerHTML = '';
   rows.forEach((g, i) => {
     const active = g.key === currentKey ? ' class="genre-active"' : '';
+    const hhw = g.hhw != null ? `<strong>${g.hhw}</strong>` : '<span class="dim">\u2014</span>';
+    const hhp = g.hhp != null ? `<strong>${g.hhp}</strong>` : '<span class="dim">\u2014</span>';
     tbody.insertAdjacentHTML('beforeend',
       `<tr${active} onclick="selectChart('${g.key}')" style="cursor:pointer" title="View ${g.genre} chart">` +
       `<td class="tr dim">${i+1}</td><td>${g.genre}</td>` +
-      `<td class="tr bld">${g.hhw}</td><td class="tr bld">${g.hhp}</td></tr>`);
+      `<td class="tr dim" style="font-size:.8rem;letter-spacing:.01em">${g.coverage}</td>` +
+      `<td class="tr">${hhw}</td><td class="tr">${hhp}</td></tr>`);
   });
 }
 updateGenreTable('all');
