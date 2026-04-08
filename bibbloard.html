@@ -112,7 +112,13 @@ h1{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:3rem;le
 /* ── Tables ───────────────────────────────────────────────────────────────── */
 .tables{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
 .tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1rem}
-.tbl-card h2{font-size:.88rem;margin-bottom:.65rem;color:var(--text)}
+.tbl-header{display:flex;align-items:center;gap:.6rem;margin-bottom:.65rem}
+.tbl-card h2{font-size:.88rem;color:var(--text);white-space:nowrap}
+.tbl-filter{flex:1;min-width:0;font-size:.78rem;padding:.25rem .5rem;
+  border:1px solid var(--border);border-radius:3px;
+  background:var(--input-bg);color:var(--text);font-family:inherit;
+  transition:border-color .15s}
+.tbl-filter:focus{outline:none;border-color:var(--accent)}
 table{width:100%;border-collapse:collapse;font-size:.8rem}
 thead th{
   background:var(--thead-bg);color:var(--thead-fg);
@@ -279,7 +285,10 @@ footer strong{color:var(--text)}
   <!-- Artist ranking tables -->
   <div class="tables">
     <div class="tbl-card">
-      <h2>Weeks H-Index &mdash; Top 50</h2>
+      <div class="tbl-header">
+        <h2>Weeks H-Index &mdash; Top 50</h2>
+        <input class="tbl-filter" id="weeks-filter" type="search" placeholder="Filter artists…" autocomplete="off" data-table="weeks">
+      </div>
       <table><thead><tr id="weeks-thead-row">
         <th style="width:2rem" class="tr sortable" data-table="weeks" data-col="rank">#</th>
         <th style="width:2rem" class="tr sortable" data-table="weeks" data-col="h">H</th>
@@ -289,7 +298,10 @@ footer strong{color:var(--text)}
       </tr></thead><tbody id="weeks-tbody"></tbody></table>
     </div>
     <div class="tbl-card">
-      <h2>Peak H-Index &mdash; Top 50</h2>
+      <div class="tbl-header">
+        <h2>Peak H-Index &mdash; Top 50</h2>
+        <input class="tbl-filter" id="peak-filter" type="search" placeholder="Filter artists…" autocomplete="off" data-table="peak">
+      </div>
       <table><thead><tr id="peak-thead-row">
         <th style="width:2rem" class="tr sortable" data-table="peak" data-col="rank">#</th>
         <th style="width:2rem" class="tr sortable" data-table="peak" data-col="h">H</th>
@@ -394,6 +406,7 @@ let _currentData  = null;
 let _tableOffset  = 50;
 const TABLE_STEP  = 50;
 const _expandedArtists = new Set();
+const _filterQuery = { weeks: '', peak: '' };
 const _sortState = {
   weeks: { col: 'rank', asc: true },
   peak:  { col: 'rank', asc: true }
@@ -809,24 +822,40 @@ document.addEventListener('mouseout', e => {
   if (span) highlightArtistInPlots(span.dataset.artist, false);
 });
 
-// Sigma slider — use event delegation on input events
+// Filter inputs + sigma slider — event delegation on input events
 document.addEventListener('input', e => {
+  const filter = e.target.closest('input.tbl-filter');
+  if (filter) {
+    _filterQuery[filter.dataset.table] = filter.value.trim();
+    if (_currentData) renderTables();
+    return;
+  }
   const inp = e.target.closest('input.tl-sigma-input');
   if (!inp) return;
   _timelineSigma = parseInt(inp.value);
   refreshAllTimelines();
 });
 
+function filterRows(rows, query) {
+  if (!query) return rows;
+  const q = query.toLowerCase();
+  return rows.filter(r => r[1].toLowerCase().includes(q));
+}
+
 function renderTables() {
-  const wRows = sortedRows(_currentData.weeksTable.slice(0, _tableOffset), _sortState.weeks);
-  const pRows = sortedRows(_currentData.peakTable.slice(0,  _tableOffset), _sortState.peak);
-  fillTableRows('weeks-tbody', wRows, 'weeks');
-  fillTableRows('peak-tbody',  pRows, 'peak');
+  const wq = _filterQuery.weeks;
+  const pq = _filterQuery.peak;
+  // When filtering, search the full table; otherwise respect _tableOffset
+  const wAll = wq ? _currentData.weeksTable : _currentData.weeksTable.slice(0, _tableOffset);
+  const pAll = pq ? _currentData.peakTable  : _currentData.peakTable.slice(0,  _tableOffset);
+  fillTableRows('weeks-tbody', sortedRows(filterRows(wAll, wq), _sortState.weeks), 'weeks');
+  fillTableRows('peak-tbody',  sortedRows(filterRows(pAll, pq), _sortState.peak),  'peak');
   updateSortHeaders('weeks');
   updateSortHeaders('peak');
+  // Hide "load more" while any filter is active
   const total = Math.max(_currentData.weeksTable.length, _currentData.peakTable.length);
   const btn = document.getElementById('load-more-btn');
-  if (_tableOffset >= total) {
+  if (wq || pq || _tableOffset >= total) {
     btn.style.display = 'none';
   } else {
     btn.style.display = '';
@@ -853,6 +882,9 @@ function renderChart(data) {
   _currentData  = data;
   _tableOffset  = TABLE_STEP;
   _expandedArtists.clear();
+  _filterQuery.weeks = ''; _filterQuery.peak = '';
+  document.getElementById('weeks-filter').value = '';
+  document.getElementById('peak-filter').value  = '';
   document.getElementById('hhw-val').textContent = data.hhw;
   document.getElementById('hhp-val').textContent = data.hhp;
   const cs = data.chart_size || 100;
