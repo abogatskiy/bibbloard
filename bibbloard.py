@@ -309,16 +309,17 @@ def update_html_genre_summary(genre_summary: list):
         return
     text = html_path.read_text(encoding="utf-8")
     genre_json = json.dumps(genre_summary, separators=(",", ":"))
-    new_text, n = re.subn(
-        r"(const GENRE_SUMMARY\s*=\s*)(\[.*?\])(;)",
-        rf"\g<1>{re.escape(genre_json)}\3",
-        text,
-        flags=re.DOTALL,
-    )
-    if n == 0:
+    lines = text.splitlines(keepends=True)
+    replaced = False
+    for i, line in enumerate(lines):
+        if re.match(r"\s*const GENRE_SUMMARY\s*=", line):
+            lines[i] = f"const GENRE_SUMMARY = {genre_json};\n"
+            replaced = True
+            break
+    if not replaced:
         print("  ⚠ GENRE_SUMMARY not found in bibbloard.html — no changes made")
     else:
-        html_path.write_text(new_text, encoding="utf-8")
+        html_path.write_text("".join(lines), encoding="utf-8")
         print("  Updated → bibbloard.html (GENRE_SUMMARY)")
 
 
