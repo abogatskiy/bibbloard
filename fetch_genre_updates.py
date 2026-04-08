@@ -306,13 +306,7 @@ def fetch_chart(name: str, slug: str, filename: str,
     Returns total entries written.
     """
     csv_path = RAW_DIR / filename
-    RAW_DIR.mkdir(exist_ok=True)
-
-    # Create file with header if fresh
-    if not csv_path.exists():
-        write_header(csv_path)
-
-    existing = get_existing_dates(csv_path)
+    existing = get_existing_dates(csv_path) if csv_path.exists() else set()
 
     if last_date is None:
         # Fresh chart — walk every 7 days from known earliest
@@ -337,6 +331,12 @@ def fetch_chart(name: str, slug: str, filename: str,
 
     if dry_run:
         return 0
+
+    # Create file with header now that we know there's real work to do
+    RAW_DIR.mkdir(exist_ok=True)
+    if not csv_path.exists():
+        write_header(csv_path)
+        existing = get_existing_dates(csv_path)  # re-read (now has header)
 
     delay = start_delay
     added = skipped = errors = 0
