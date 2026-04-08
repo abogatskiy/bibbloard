@@ -157,6 +157,39 @@ tbody tr:hover{background:var(--hover)}
 /* Active genre row highlight */
 tr.genre-active > td:first-child::before{content:'›';color:var(--accent);margin-right:.25rem}
 
+/* ── Sortable column headers ──────────────────────────────────────────────── */
+thead th.sortable{cursor:pointer;user-select:none;transition:color .12s}
+thead th.sortable:hover{color:var(--accent)}
+thead th.sort-asc::after {content:' ▲';font-size:.6rem;color:var(--accent);opacity:.85}
+thead th.sort-desc::after{content:' ▼';font-size:.6rem;color:var(--accent);opacity:.85}
+
+/* ── Velocity ─────────────────────────────────────────────────────────────── */
+.vel-zero{color:var(--muted);font-size:.8rem}
+.vel-pos{font-weight:bold}
+
+/* ── Expandable artist timeline row ──────────────────────────────────────── */
+.artist-link{cursor:pointer;text-decoration:none;color:inherit;border-bottom:1px dotted var(--muted)}
+.artist-link:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.timeline-row>td{padding:0!important;border-bottom:2px solid var(--border)}
+.timeline-inner{padding:.4rem .8rem .6rem;background:var(--surface)}
+.timeline-plot{width:100%;height:210px}
+/* Timeline view controls */
+.tl-controls{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;
+  padding:.3rem .1rem .2rem;font-size:.78rem;color:var(--muted)}
+.tl-view-btn{
+  font-family:inherit;font-size:.75rem;padding:.18rem .6rem;
+  border:1px solid var(--border);border-radius:3px;
+  background:var(--input-bg);color:var(--muted);cursor:pointer;
+  transition:background .12s,color .12s,border-color .12s;
+}
+.tl-view-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tl-view-btn:hover:not(.active){border-color:var(--muted);color:var(--text)}
+.tl-sigma-wrap{display:flex;align-items:center;gap:.35rem;margin-left:.3rem}
+.tl-sigma-wrap input[type=range]{
+  width:90px;accent-color:var(--accent);cursor:pointer;
+}
+.tl-sigma-lbl{min-width:4rem;color:var(--muted);font-size:.74rem}
+
 /* ── Load more ────────────────────────────────────────────────────────────── */
 .load-more-wrap{text-align:center;margin:1rem 0 2.5rem}
 #load-more-btn{
@@ -305,19 +338,21 @@ footer strong{color:var(--text)}
   <div class="tables">
     <div class="tbl-card">
       <h2>Weeks H-Index &mdash; Top 50</h2>
-      <table><thead><tr>
-        <th style="width:2rem" class="tr">#</th>
-        <th style="width:2rem" class="tr">H</th>
-        <th style="width:3.2rem" class="tr">Songs</th>
+      <table><thead><tr id="weeks-thead-row">
+        <th style="width:2rem" class="tr sortable" data-table="weeks" data-col="rank">#</th>
+        <th style="width:2rem" class="tr sortable" data-table="weeks" data-col="h">H</th>
+        <th style="width:3.2rem" class="tr sortable" data-table="weeks" data-col="n">Songs</th>
+        <th style="width:3.5rem" class="tr sortable" data-table="weeks" data-col="velocity" title="Change in h-index over the past year">+1yr</th>
         <th>Artist</th>
       </tr></thead><tbody id="weeks-tbody"></tbody></table>
     </div>
     <div class="tbl-card">
       <h2>Peak H-Index &mdash; Top 50</h2>
-      <table><thead><tr>
-        <th style="width:2rem" class="tr">#</th>
-        <th style="width:2rem" class="tr">H</th>
-        <th style="width:3.2rem" class="tr">Songs</th>
+      <table><thead><tr id="peak-thead-row">
+        <th style="width:2rem" class="tr sortable" data-table="peak" data-col="rank">#</th>
+        <th style="width:2rem" class="tr sortable" data-table="peak" data-col="h">H</th>
+        <th style="width:3.2rem" class="tr sortable" data-table="peak" data-col="n">Songs</th>
+        <th style="width:3.5rem" class="tr sortable" data-table="peak" data-col="velocity" title="Change in h-index over the past year">+1yr</th>
         <th>Artist</th>
       </tr></thead><tbody id="peak-tbody"></tbody></table>
     </div>
@@ -337,7 +372,7 @@ footer strong{color:var(--text)}
 
 <script>
 // ── Genre summary (inlined — small data) ─────────────────────────────────────
-const GENRE_SUMMARY = [{"genre":"Country","key":"country","periods":{"all":{"hhw":19,"hhp":37},"2020":{"hhw":8,"hhp":10},"2015":{"hhw":12,"hhp":15},"2010":{"hhw":15,"hhp":17},"2005":{"hhw":18,"hhp":20},"2000":{"hhw":19,"hhp":22}},"earliest":"1958-10-20","latest":"2026-03-28"},{"genre":"Hot 100","key":"hot100","periods":{"all":{"hhw":18,"hhp":35},"2020":{"hhw":9,"hhp":23},"2015":{"hhw":12,"hhp":26},"2010":{"hhw":14,"hhp":28},"2005":{"hhw":16,"hhp":29},"2000":{"hhw":17,"hhp":30}},"earliest":"1958-08-04","latest":"2026-04-04"},{"genre":"Latin","key":"latin","periods":{"all":{"hhw":16,"hhp":24},"2015":{"hhw":7,"hhp":7},"2010":{"hhw":11,"hhp":12},"2005":{"hhw":13,"hhp":15},"2000":{"hhw":15,"hhp":18}},"earliest":"1986-09-20","latest":"2018-12-29"},{"genre":"Hip-Hop","key":"hiphop","periods":{"all":{"hhw":14,"hhp":27},"2015":{"hhw":7,"hhp":11},"2010":{"hhw":8,"hhp":13},"2005":{"hhw":10,"hhp":14},"2000":{"hhw":11,"hhp":14}},"earliest":"1958-10-20","latest":"2019-01-05"},{"genre":"Pop","key":"pop","periods":{"all":{"hhw":12,"hhp":13},"2015":{"hhw":5,"hhp":6},"2010":{"hhw":9,"hhp":9},"2005":{"hhw":10,"hhp":12},"2000":{"hhw":11,"hhp":13}},"earliest":"1992-10-03","latest":"2018-12-29"},{"genre":"Rock","key":"rock","periods":{"all":{"hhw":10,"hhp":15},"2015":{"hhw":7,"hhp":13},"2010":{"hhw":10,"hhp":15},"2005":{"hhw":10,"hhp":15},"2000":{"hhw":10,"hhp":15}},"earliest":"2009-06-20","latest":"2018-12-29"},{"genre":"Dance/Electronic","key":"dance_electronic","periods":{"all":{"hhw":5,"hhp":7},"2015":{"hhw":5,"hhp":6},"2010":{"hhw":5,"hhp":7},"2005":{"hhw":5,"hhp":7},"2000":{"hhw":5,"hhp":7}},"earliest":"2013-01-26","latest":"2018-12-29"}];
+const GENRE_SUMMARY = [{"genre":"Country","key":"country","periods":{"all":{"hhw":19,"hhp":37},"2020":{"hhw":8,"hhp":10},"2015":{"hhw":12,"hhp":15},"2010":{"hhw":15,"hhp":17},"2005":{"hhw":18,"hhp":20},"2000":{"hhw":19,"hhp":22}},"earliest":"1958-10-20","latest":"2026-03-28"},{"genre":"Hot 100","key":"hot100","periods":{"all":{"hhw":18,"hhp":35},"2020":{"hhw":9,"hhp":23},"2015":{"hhw":12,"hhp":26},"2010":{"hhw":14,"hhp":28},"2005":{"hhw":16,"hhp":29},"2000":{"hhw":17,"hhp":30}},"earliest":"1958-08-04","latest":"2026-04-04"},{"genre":"Latin","key":"latin","periods":{"all":{"hhw":17,"hhp":24},"2020":{"hhw":7,"hhp":11},"2015":{"hhw":10,"hhp":13},"2010":{"hhw":13,"hhp":16},"2005":{"hhw":14,"hhp":16},"2000":{"hhw":15,"hhp":20}},"earliest":"1986-09-20","latest":"2026-03-28"},{"genre":"Hip-Hop","key":"hiphop","periods":{"all":{"hhw":14,"hhp":29},"2020":{"hhw":7,"hhp":17},"2015":{"hhw":10,"hhp":19},"2010":{"hhw":10,"hhp":20},"2005":{"hhw":11,"hhp":20},"2000":{"hhw":12,"hhp":20}},"earliest":"1958-10-20","latest":"2026-03-28"},{"genre":"Pop","key":"pop","periods":{"all":{"hhw":13,"hhp":15},"2020":{"hhw":8,"hhp":8},"2015":{"hhw":9,"hhp":10},"2010":{"hhw":11,"hhp":13},"2005":{"hhw":12,"hhp":13},"2000":{"hhw":13,"hhp":14}},"earliest":"1992-10-03","latest":"2026-03-28"},{"genre":"Rock","key":"rock","periods":{"all":{"hhw":12,"hhp":19},"2020":{"hhw":5,"hhp":8},"2015":{"hhw":9,"hhp":16},"2010":{"hhw":11,"hhp":19},"2005":{"hhw":12,"hhp":19},"2000":{"hhw":12,"hhp":19}},"earliest":"2009-06-20","latest":"2026-03-28"},{"genre":"Dance/Electronic","key":"dance_electronic","periods":{"all":{"hhw":7,"hhp":10},"2020":{"hhw":5,"hhp":8},"2015":{"hhw":6,"hhp":10},"2010":{"hhw":7,"hhp":10},"2005":{"hhw":7,"hhp":10},"2000":{"hhw":7,"hhp":10}},"earliest":"2013-01-26","latest":"2026-03-28"},{"genre":"Adult Contemporary","key":"adult_contemporary","periods":{"all":{"hhw":5,"hhp":6},"2005":{"hhw":2,"hhp":3},"2000":{"hhw":5,"hhp":6}},"earliest":"2000-01-01","latest":"2005-03-05"}];
 
 // ── Dark mode ─────────────────────────────────────────────────────────────────
 function applyTheme(theme) {
@@ -416,6 +451,13 @@ updateGenreTable('all');
 let _currentData  = null;
 let _tableOffset  = 50;
 const TABLE_STEP  = 50;
+const _expandedArtists = new Set();
+const _sortState = {
+  weeks: { col: 'rank', asc: true },
+  peak:  { col: 'rank', asc: true }
+};
+let _timelineView  = 'hindex';   // 'hindex' | 'velocity'
+let _timelineSigma = 26;         // weeks
 
 // ── Label spreading (greedy top-down) ─────────────────────────────────────────
 function spreadLabels(pts, minGap, yMin, yMax) {
@@ -465,13 +507,15 @@ function createPlot(divId, curves, yLabel, chartSize) {
   // Artist curves
   for (const c of curves) {
     const x = c.values.map((_, i) => i + 1);
+    const customdata = c.songs.map((s, i) => [s, c.years ? (c.years[i] ?? '') : '']);
     traces.push({
       x, y: c.values,
       mode: 'lines',
       line: {color: c.color, width: 2.2},
       showlegend: false,
-      customdata: c.songs,
-      hovertemplate: '<b>' + c.artist + '</b><br><i>%{customdata}</i><br>' +
+      customdata,
+      hovertemplate: '<b>' + c.artist + '</b><br><i>%{customdata[0]}</i>' +
+                     '<span style="opacity:.7"> (%{customdata[1]})</span><br>' +
                      '#%{x} \u00b7 ' + yLabel + ': %{y}<extra></extra>'
     });
   }
@@ -534,20 +578,257 @@ function createPlot(divId, curves, yLabel, chartSize) {
   }, {responsive: true, displayModeBar: false});
 }
 
+// ── Velocity colour ───────────────────────────────────────────────────────────
+function velocityColor(v) {
+  if (!v || v <= 0) return null;
+  // Ramp from a muted rose → vivid red as v grows (max at v=5)
+  // Works on both light and dark backgrounds
+  const t = Math.min(v / 5, 1);
+  const sat = Math.round(70 + 30 * t);
+  const lit = Math.round(58 - 16 * t);
+  return `hsl(0,${sat}%,${lit}%)`;
+}
+
+// ── Timeline chart ────────────────────────────────────────────────────────────
+function artistColor(artist, metric) {
+  if (!_currentData) return null;
+  const arr = metric === 'weeks' ? _currentData.weeks : _currentData.peak;
+  return arr.find(c => c.artist === artist)?.color ?? null;
+}
+
+// ── H-index step-function trace ───────────────────────────────────────────────
+function hindexTrace(data, name, color, latestDate) {
+  if (!data || !data.d || !data.d.length) return null;
+  const xs = [...data.d];
+  const ys = [...data.h];
+  if (latestDate && latestDate > xs[xs.length - 1]) {
+    xs.push(latestDate);
+    ys.push(ys[ys.length - 1]);
+  }
+  return { x: xs, y: ys, mode: 'lines', name,
+           line: { shape: 'hv', color, width: 2.2 },
+           hovertemplate: '%{x|%Y-%m-%d}: h\u2009=\u2009%{y}<extra>' + name + '</extra>' };
+}
+
+// ── Gaussian-smoothed velocity trace ─────────────────────────────────────────
+// The h-index is a step function; its derivative is a sum of unit impulses at
+// each change-point date.  Convolving with a Gaussian of width σ gives a smooth
+// "rate of h-index gain" curve with units of h-index points per year.
+function velocityTrace(data, name, color, latestDate, sigmaWeeks) {
+  if (!data || !data.d || !data.d.length) return null;
+  const MS_PER_YEAR = 365.25 * 86400 * 1000;
+  const sigma_ms    = sigmaWeeks * 7 * 86400 * 1000;
+  const norm        = MS_PER_YEAR / (sigma_ms * Math.sqrt(2 * Math.PI));
+
+  const changeTs = data.d.map(d => +new Date(d));
+  const tMin = changeTs[0];
+  const tMax = latestDate ? +new Date(latestDate) : changeTs[changeTs.length - 1];
+
+  // Evaluate on a bi-weekly grid (smooth curve doesn't need higher resolution)
+  const step = 14 * 86400 * 1000;
+  const xs = [], ys = [];
+  for (let t = tMin; t <= tMax + step; t += step) {
+    let v = 0;
+    for (const ct of changeTs) {
+      const z = (t - ct) / sigma_ms;
+      v += Math.exp(-0.5 * z * z);
+    }
+    xs.push(new Date(t).toISOString().slice(0, 10));
+    ys.push(+(v * norm).toFixed(3));
+  }
+  return { x: xs, y: ys, mode: 'lines', name,
+           line: { color, width: 2 },
+           hovertemplate: '%{x|%Y-%m-%d}: %{y:.2f} h/yr<extra>' + name + '</extra>' };
+}
+
+function sigmaLabel(weeks) {
+  if (weeks < 8)  return weeks + ' wk';
+  if (weeks < 52) return Math.round(weeks / 4.33) + ' mo';
+  return (weeks / 52).toFixed(1).replace(/\.0$/, '') + ' yr';
+}
+
+function renderTimeline(artist, plotEl) {
+  const tl  = _currentData.timelines?.[artist];
+  const col = plotColors();
+  if (!tl || (!tl.w && !tl.p)) {
+    plotEl.innerHTML = '<em style="font-size:.8rem;color:var(--muted)">No timeline data available.</em>';
+    return;
+  }
+  const latestDate = _currentData.latest_date || null;
+  const wc = '#4e79a7';   // blue  — weeks h-index
+  const pc = '#e15759';   // red   — peak h-index
+
+  const traces = [];
+  if (_timelineView === 'hindex') {
+    const wt = hindexTrace(tl.w, 'Weeks h-index', wc, latestDate);
+    const pt = hindexTrace(tl.p, 'Peak h-index',  pc, latestDate);
+    if (wt) traces.push(wt);
+    if (pt) traces.push(pt);
+  } else {
+    const wt = velocityTrace(tl.w, 'Weeks velocity', wc, latestDate, _timelineSigma);
+    const pt = velocityTrace(tl.p, 'Peak velocity',  pc, latestDate, _timelineSigma);
+    if (wt) traces.push(wt);
+    if (pt) traces.push(pt);
+  }
+
+  if (!traces.length) {
+    plotEl.innerHTML = '<em style="font-size:.8rem;color:var(--muted)">No data.</em>';
+    return;
+  }
+
+  const isVelocity = _timelineView === 'velocity';
+  Plotly.newPlot(plotEl, traces, {
+    height: 210,
+    margin: { t: 8, b: 42, l: 48, r: 10 },
+    showlegend: true,
+    legend: { orientation: 'h', x: 0, y: 1.08, font: { size: 10, color: col.font } },
+    xaxis: { type: 'date',
+             title: { text: 'Date', font: { color: col.font }, standoff: 4 },
+             tickfont: { size: 10, color: col.font }, showgrid: true, gridcolor: col.grid,
+             zeroline: false, linecolor: col.line, showline: true },
+    yaxis: { title: { text: isVelocity ? 'h-index / yr' : 'H-Index',
+                      font: { color: col.font }, standoff: 4 },
+             tickfont: { size: 10, color: col.font }, showgrid: true, gridcolor: col.grid,
+             zeroline: false, linecolor: col.line, showline: true, rangemode: 'tozero' },
+    plot_bgcolor: col.bg, paper_bgcolor: col.bg,
+    font: { family: 'Georgia, serif', size: 10, color: col.font },
+    hovermode: 'x unified'
+  }, { responsive: true, displayModeBar: false });
+}
+
+// Re-render only the chart divs inside currently-expanded rows (avoids full table rebuild)
+function refreshAllTimelines() {
+  _expandedArtists.forEach(key => {
+    const [artist, tableKey] = key.split('|');
+    const uid   = 'tl-' + tableKey + '-' + encodeURIComponent(artist);
+    const plotEl = document.getElementById(uid);
+    if (plotEl) renderTimeline(artist, plotEl);
+  });
+  // Sync all control UIs to global state
+  document.querySelectorAll('.tl-view-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === _timelineView);
+  });
+  document.querySelectorAll('.tl-sigma-wrap').forEach(el => {
+    el.style.display = _timelineView === 'velocity' ? 'flex' : 'none';
+  });
+  document.querySelectorAll('.tl-sigma-input').forEach(inp => {
+    inp.value = _timelineSigma;
+  });
+  document.querySelectorAll('.tl-sigma-lbl').forEach(lbl => {
+    lbl.textContent = 'σ\u2009=\u2009' + sigmaLabel(_timelineSigma);
+  });
+}
+
+// ── Sort helpers ──────────────────────────────────────────────────────────────
+// Row format: [rank(0), artist(1), h(2), n(3), velocity(4)]
+const COL_IDX = { rank: 0, artist: 1, h: 2, n: 3, velocity: 4 };
+
+function sortedRows(rows, state) {
+  const idx = COL_IDX[state.col] ?? 0;
+  const asc = state.asc ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const av = a[idx], bv = b[idx];
+    if (typeof av === 'string') return asc * av.localeCompare(bv);
+    return asc * ((av ?? 0) - (bv ?? 0));
+  });
+}
+
+function updateSortHeaders(tableKey) {
+  const row = document.getElementById(tableKey + '-thead-row');
+  if (!row) return;
+  row.querySelectorAll('th.sortable').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.col === _sortState[tableKey].col) {
+      th.classList.add(_sortState[tableKey].asc ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
 // ── Table rendering ───────────────────────────────────────────────────────────
-function fillTableRows(id, rows) {
+function fillTableRows(id, rows, tableKey) {
   const tbody = document.getElementById(id);
   tbody.innerHTML = '';
-  for (const [rank, artist, h, n] of rows) {
+  for (const row of rows) {
+    const [rank, artist, h, n, velocity] = row;
+    const vel = velocity ?? 0;
+    const velColor = velocityColor(vel);
+    const velHtml  = vel > 0
+      ? `<td class="tr vel-pos" style="color:${velColor}">+${vel}</td>`
+      : `<td class="tr vel-zero">—</td>`;
+    const isExpanded = _expandedArtists.has(artist + '|' + tableKey);
     tbody.insertAdjacentHTML('beforeend',
-      `<tr><td class="tr dim">${rank}</td><td class="tr bld">${h}</td>` +
-      `<td class="tr dim">${n}</td><td>${artist}</td></tr>`);
+      `<tr data-artist="${escHtml(artist)}" data-table="${tableKey}">` +
+      `<td class="tr dim">${rank}</td>` +
+      `<td class="tr bld">${h}</td>` +
+      `<td class="tr dim">${n}</td>` +
+      velHtml +
+      `<td><span class="artist-link" data-artist="${escHtml(artist)}" data-table="${tableKey}">${escHtml(artist)}</span></td>` +
+      `</tr>`);
+    if (isExpanded) {
+      const uid   = 'tl-' + tableKey + '-' + encodeURIComponent(artist);
+      const sigV  = _timelineSigma;
+      const hiAct = _timelineView === 'hindex' ? ' active' : '';
+      const vlAct = _timelineView === 'velocity' ? ' active' : '';
+      const sigDisp = _timelineView === 'velocity' ? 'flex' : 'none';
+      tbody.insertAdjacentHTML('beforeend',
+        `<tr class="timeline-row"><td colspan="5">` +
+        `<div class="timeline-inner">` +
+        `<div class="tl-controls">` +
+        `<button class="tl-view-btn${hiAct}" data-view="hindex">H-Index</button>` +
+        `<button class="tl-view-btn${vlAct}" data-view="velocity">Velocity</button>` +
+        `<span class="tl-sigma-wrap" style="display:${sigDisp}">` +
+        `<input class="tl-sigma-input" type="range" min="4" max="104" step="4" value="${sigV}">` +
+        `<span class="tl-sigma-lbl">σ\u2009=\u2009${sigmaLabel(sigV)}</span>` +
+        `</span>` +
+        `</div>` +
+        `<div id="${uid}" class="timeline-plot"></div>` +
+        `</div></td></tr>`);
+      const plotEl = document.getElementById(uid);
+      if (plotEl) renderTimeline(artist, plotEl);
+    }
   }
 }
 
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function toggleArtistTimeline(artist, tableKey) {
+  const key = artist + '|' + tableKey;
+  if (_expandedArtists.has(key)) _expandedArtists.delete(key);
+  else _expandedArtists.add(key);
+  renderTables();
+}
+
+// Event delegation for artist links (handles names with quotes/special chars)
+document.addEventListener('click', e => {
+  const span = e.target.closest('span.artist-link');
+  if (span) { e.stopPropagation(); toggleArtistTimeline(span.dataset.artist, span.dataset.table); return; }
+
+  // Timeline view toggle buttons
+  const viewBtn = e.target.closest('button.tl-view-btn');
+  if (viewBtn) {
+    _timelineView = viewBtn.dataset.view;
+    refreshAllTimelines();
+  }
+});
+
+// Sigma slider — use event delegation on input events
+document.addEventListener('input', e => {
+  const inp = e.target.closest('input.tl-sigma-input');
+  if (!inp) return;
+  _timelineSigma = parseInt(inp.value);
+  refreshAllTimelines();
+});
+
 function renderTables() {
-  fillTableRows('weeks-tbody', _currentData.weeksTable.slice(0, _tableOffset));
-  fillTableRows('peak-tbody',  _currentData.peakTable.slice(0, _tableOffset));
+  const wRows = sortedRows(_currentData.weeksTable.slice(0, _tableOffset), _sortState.weeks);
+  const pRows = sortedRows(_currentData.peakTable.slice(0,  _tableOffset), _sortState.peak);
+  fillTableRows('weeks-tbody', wRows, 'weeks');
+  fillTableRows('peak-tbody',  pRows, 'peak');
+  updateSortHeaders('weeks');
+  updateSortHeaders('peak');
   const total = Math.max(_currentData.weeksTable.length, _currentData.peakTable.length);
   const btn = document.getElementById('load-more-btn');
   if (_tableOffset >= total) {
@@ -576,6 +857,7 @@ function redrawPlots() {
 function renderChart(data) {
   _currentData  = data;
   _tableOffset  = TABLE_STEP;
+  _expandedArtists.clear();
   document.getElementById('hhw-val').textContent = data.hhw;
   document.getElementById('hhp-val').textContent = data.hhp;
   const cs = data.chart_size || 100;
@@ -608,6 +890,23 @@ async function loadChart() {
     loading.style.display = 'none';
   }
 }
+
+// ── Sort column click wiring ──────────────────────────────────────────────────
+document.querySelectorAll('thead th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const tableKey = th.dataset.table;
+    const col      = th.dataset.col;
+    const state    = _sortState[tableKey];
+    if (state.col === col) {
+      state.asc = !state.asc;
+    } else {
+      state.col = col;
+      state.asc = col === 'rank';   // rank defaults asc; metrics default desc
+      if (col === 'h' || col === 'n' || col === 'velocity') state.asc = false;
+    }
+    if (_currentData) renderTables();
+  });
+});
 
 // ── Wiring ────────────────────────────────────────────────────────────────────
 document.getElementById('chart-select').addEventListener('change', loadChart);

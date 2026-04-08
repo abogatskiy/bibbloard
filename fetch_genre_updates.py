@@ -18,8 +18,11 @@ Requirements:
 import argparse
 import csv
 import datetime
+import json
+import os
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 try:
@@ -50,7 +53,9 @@ billboard._get_session_with_retries = _patched_session
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 
-RAW_DIR = Path(__file__).parent / "raw"
+RAW_DIR      = Path(__file__).parent / "raw"
+HOT100_URL   = "https://raw.githubusercontent.com/mhollingshead/billboard-hot-100/main/all.json"
+HOT100_CACHE = RAW_DIR / "all.json"
 
 # (display name, billboard.py slug, CSV filename in raw/)
 CHARTS = [
@@ -213,6 +218,147 @@ def fmt_duration(seconds: float) -> str:
     if m: return f"{m}m {s}s"
     return f"{s}s"
 
+# ── Hot 100 helpers ────────────────────────────────────────────────────────────
+
+def get_hot100_latest_date():
+    """Return the latest chart date in the cached all.json, or None if not cached."""
+    if not HOT100_CACHE.exists():
+        return None
+    try:
+        with open(HOT100_CACHE, encoding="utf-8") as f:
+            data = json.load(f)
+        if not data:
+            return None
+        latest = max((entry.get("date", "") for entry in data), default="")
+        return datetime.date.fromisoformat(latest) if latest else None
+    except Exception:
+        return None
+
+def _download_with_progress(url: str, dest: Path, label: str):
+    """Stream-download url to dest with an inline progress bar. Atomic write."""
+    bar_w = 28
+    start = time.perf_counter()
+    tmp   = dest.with_suffix(".tmp")
+
+    def hook(count, block_size, total_size):
+        if total_size <= 0:
+            return
+        done    = min(count * block_size, total_size)
+        frac    = done / total_size
+        filled  = int(bar_w * frac)
+        bar     = '█' * filled + '░' * (bar_w - filled)
+        elapsed = time.perf_counter() - start
+        speed   = done / elapsed / 1e6 if elapsed > 0.1 else 0.0
+        mb_done  = done  / 1e6
+        mb_total = total_size / 1e6
+        sys.stdout.write(
+            f'\r  [{bar}]  {mb_done:.1f}/{mb_total:.1f} MB  {speed:.1f} MB/s  '
+        )
+        sys.stdout.flush()
+
+    dest.parent.mkdir(exist_ok=True)
+    tmp.unlink(missing_ok=True)
+    try:
+        urllib.request.urlretrieve(url, tmp, hook)
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+        os.replace(tmp, dest)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+def fetch_hot100(cutoff: datetime.date, dry_run: bool) -> int:
+    """Re-download Hot 100 all.json from GitHub if the cache is stale (> 7 days old)."""
+    latest = get_hot100_latest_date()
+    stale  = latest is None or (cutoff - latest).days > 7
+    if not stale:
+        print(f"  Hot 100: up to date (latest chart: {latest})")
+        return 0
+    if dry_run:
+        action = "re-download" if latest else "download"
+        print(f"  Hot 100: would {action} all.json from GitHub (~50 MB)")
+        return 0
+    if latest:
+        print(f"  Hot 100: cache is stale (latest: {latest}) — re-downloading from GitHub …")
+    else:
+        print("  Hot 100: no cache — downloading from GitHub (~50 MB) …")
+    try:
+        _download_with_progress(HOT100_URL, HOT100_CACHE, "Hot 100")
+    except KeyboardInterrupt:
+        print("\nInterrupted.")
+        raise
+    new_latest = get_hot100_latest_date()
+    print(f"  Hot 100: done — latest chart: {new_latest}")
+    return 1
+
+# ── Progress bar ───────────────────────────────────────────────────────────────
+
+class Progress:
+    """Single-line overwriting progress bar with ETA.
+    Use interrupt() to print messages above the bar without corrupting it."""
+    _FULL  = '█'
+    _EMPTY = '░'
+
+    def __init__(self, total: int, bar_width: int = 28):
+        self.total   = max(total, 1)
+        self.done    = 0
+        self.start   = time.perf_counter()
+        self.desc    = ''
+        self._bar_w  = bar_width
+        self._t_last = -1.0
+        self._last_len = 0
+
+    def update(self, n: int = 1, desc: str = None):
+        self.done += n
+        if desc is not None:
+            self.desc = desc
+        t = time.perf_counter()
+        if t - self._t_last >= 0.1 or self.done >= self.total:
+            self._t_last = t
+            self._render()
+
+    def _render(self):
+        try:
+            cols = os.get_terminal_size().columns
+        except OSError:
+            cols = 100
+        elapsed = time.perf_counter() - self.start
+        frac    = min(self.done / self.total, 1.0)
+        filled  = int(self._bar_w * frac)
+        bar     = self._FULL * filled + self._EMPTY * (self._bar_w - filled)
+
+        if frac >= 1.0:
+            right = f'  100%  {fmt_duration(elapsed)}'
+        elif frac > 0.01:
+            eta = elapsed * (1.0 / frac - 1.0)
+            right = f'  {frac*100:4.1f}%  {fmt_duration(elapsed)} + ETA {fmt_duration(eta)}'
+        else:
+            right = f'  {frac*100:4.1f}%  …'
+
+        prefix = f'\r[{bar}] '
+        avail  = cols - len(prefix) - len(right) - 2
+        desc   = self.desc if avail > 0 else ''
+        if len(desc) > avail:
+            desc = desc[:max(avail - 1, 0)] + '…'
+        line = prefix + desc.ljust(max(avail, 0)) + right
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        self._last_len = len(line)
+
+    def interrupt(self, msg: str):
+        """Print a message on its own line, then redraw the bar below it."""
+        sys.stdout.write('\r' + ' ' * self._last_len + '\r')  # clear bar
+        print(msg)
+        self._render()
+
+    def finish(self, msg: str = ''):
+        self.done = self.total
+        if msg:
+            self.desc = msg
+        self._render()
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+
 # ── Interactive menu ───────────────────────────────────────────────────────────
 
 def print_menu(cutoff: datetime.date):
@@ -221,7 +367,21 @@ def print_menu(cutoff: datetime.date):
     print("  #   Chart                  Status")
     print("  -   -----                  ------")
     items = []
-    for i, (name, slug, filename) in enumerate(CHARTS, 1):
+
+    # ── Hot 100 (GitHub download, not billboard.py) ────────────────────────────
+    hot100_latest = get_hot100_latest_date()
+    if hot100_latest is None:
+        h100_status = "not cached — will download (~50 MB)"
+    elif (cutoff - hot100_latest).days <= 7:
+        h100_status = f"up to date (latest: {hot100_latest})"
+    else:
+        age = (cutoff - hot100_latest).days
+        h100_status = f"latest: {hot100_latest}  →  stale ({age}d old), re-download (~50 MB)"
+    print(f"  {1:<3} {'Hot 100':<22} {h100_status}")
+    items.append(("Hot 100", None, "all.json", None, hot100_latest))
+
+    # ── Genre charts (billboard.py scraper) ────────────────────────────────────
+    for i, (name, slug, filename) in enumerate(CHARTS, 2):
         csv_path = RAW_DIR / filename
         earliest_date, last = get_date_range(csv_path)
         if last is None:
@@ -321,13 +481,10 @@ def fetch_chart(name: str, slug: str, filename: str,
         week_dates  = sorted(set(gap_dates + new_dates))
 
     if not week_dates:
-        print(f"[{name}] Already up to date (last: {last_date})")
+        print(f"  {name}: already up to date (last: {last_date})")
         return 0
 
-    est_secs = len(week_dates) * start_delay
-    print(f"[{name}] {len(week_dates)} weeks to fetch  "
-          f"({week_dates[0]} … {week_dates[-1]})  "
-          f"est. {fmt_duration(est_secs)} at {start_delay}s/req")
+    print(f"  {name}: {len(week_dates)} weeks to fetch  ({week_dates[0]} → {week_dates[-1]})")
 
     if dry_run:
         return 0
@@ -338,9 +495,12 @@ def fetch_chart(name: str, slug: str, filename: str,
         write_header(csv_path)
         existing = get_existing_dates(csv_path)  # re-read (now has header)
 
-    delay = start_delay
-    added = skipped = errors = 0
+    delay        = start_delay
+    added        = 0
+    skipped      = 0
+    errors       = 0
     total_entries = 0
+    progress     = Progress(len(week_dates))
 
     for i, week_date in enumerate(week_dates):
         try:
@@ -350,29 +510,32 @@ def fetch_chart(name: str, slug: str, filename: str,
             if n:
                 added += 1
                 total_entries += n
-                pct = f"{(i+1)/len(week_dates)*100:.0f}%"
-                print(f"  [{pct:>4}] {actual}  +{n} entries  delay={delay:.2f}s")
-                # Gradually recover speed after a backoff
+                delay_s = f"  delay={delay:.2f}s" if delay > 0 else ""
+                progress.update(1, f"{actual}  +{n} entries{delay_s}")
                 delay = max(0.0, delay * DELAY_RECOVER)
             else:
                 skipped += 1
-                print(f"  [skip] {actual}  (date snapped to existing week)")
+                progress.update(1, f"{actual}  (already exists, skipped)")
+
+        except KeyboardInterrupt:
+            progress.interrupt("\nInterrupted.")
+            raise
 
         except Exception as e:
             msg = str(e)
             if "403" in msg or "429" in msg:
-                delay = min(DELAY_MAX, delay * DELAY_BACKOFF)
-                print(f"  [RATE] {week_date}  rate-limited — backing off to {delay:.1f}s")
+                delay = min(DELAY_MAX, max(delay, 1.0) * DELAY_BACKOFF)
+                progress.interrupt(f"  ⚠ rate-limited {week_date} — sleeping {delay:.0f}s")
                 time.sleep(delay)
                 continue
             else:
                 errors += 1
-                print(f"  [ERR ] {week_date}: {e}")
+                progress.interrupt(f"  ✗ {week_date}: {e}")
 
-        if i < len(week_dates) - 1:
+        if delay > 0 and i < len(week_dates) - 1:
             time.sleep(delay)
 
-    print(f"[{name}] Done — {added} weeks added, {skipped} skipped, {errors} errors\n")
+    progress.finish(f"{added} weeks added, {skipped} skipped, {errors} errors")
     return total_entries
 
 # ── Main ───────────────────────────────────────────────────────────────────────
@@ -392,8 +555,9 @@ def main():
     cutoff = datetime.date.today() - datetime.timedelta(days=7)
 
     if args.all or args.dry_run:
-        # Non-interactive: fetch all charts
-        selection = []
+        # Non-interactive: fetch all charts (Hot 100 first)
+        hot100_latest = get_hot100_latest_date()
+        selection = [("Hot 100", None, "all.json", None, hot100_latest)]
         for name, slug, filename in CHARTS:
             earliest, last = get_date_range(RAW_DIR / filename)
             selection.append((name, slug, filename, earliest, last))
@@ -403,10 +567,14 @@ def main():
 
     total_written = 0
     for name, slug, filename, earliest, last_date in selection:
-        total_written += fetch_chart(
-            name, slug, filename, earliest, last_date,
-            cutoff, args.delay, args.dry_run
-        )
+        if slug is None:
+            # Hot 100 — full re-download from GitHub
+            total_written += fetch_hot100(cutoff, args.dry_run)
+        else:
+            total_written += fetch_chart(
+                name, slug, filename, earliest, last_date,
+                cutoff, args.delay, args.dry_run
+            )
 
     if args.dry_run:
         print("(dry run — no data fetched)")
