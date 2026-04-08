@@ -67,6 +67,7 @@ CHARTS = [
     ("Country Airplay",    "country-airplay",         "country_airplay.csv"),
     ("Gospel",             "gospel-songs",            "gospel.csv"),
     ("Jazz",               "jazz-songs",              "jazz.csv"),
+    ("Alternative",        "alternative-songs",       "alternative.csv"),
 ]
 
 # Adaptive delay configuration
@@ -77,7 +78,7 @@ DELAY_RECOVER = 0.85   # multiply on success (gradual recovery)
 MAX_RETRIES   = 3
 RETRY_DELAY   = 15.0   # seconds before retry on transient error
 
-# Billboard's earliest available date (varies by chart)
+# Earliest date reachable via billboard.py scraper for each chart
 CHART_EARLIEST = {
     "country-songs":         "1958-10-20",
     "r-b-hip-hop-songs":     "1958-10-20",
@@ -85,11 +86,12 @@ CHART_EARLIEST = {
     "pop-songs":             "1992-10-03",
     "hot-rock-songs":        "2009-06-20",
     "dance-electronic-songs":"2013-01-26",
-    "adult-contemporary":    "1961-03-20",
-    "adult-pop-songs":       "1992-10-03",
-    "country-airplay":       "1990-03-10",
-    "gospel-songs":          "1992-04-04",
-    "jazz-songs":            "1994-01-08",
+    "adult-contemporary":    "2000-01-01",
+    "adult-pop-songs":       "2000-01-01",
+    "country-airplay":       "2000-01-01",
+    "gospel-songs":          "2005-03-19",
+    "jazz-songs":            "2005-10-22",
+    "alternative-songs":     "2000-01-01",
 }
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

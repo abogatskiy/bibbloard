@@ -2,7 +2,7 @@
 FROM nginx:alpine
 
 # Copy HTML app
-COPY billboard_hindex.html /usr/share/nginx/html/index.html
+COPY bibbloard.html /usr/share/nginx/html/index.html
 
 # Copy pre-generated data directory (JSON files only, no CSVs)
 COPY data/*.json /usr/share/nginx/html/data/

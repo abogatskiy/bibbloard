@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Billboard H-Index Calculator
+Bibbloard — Billboard H-Index Calculator
 ==============================
 Computes two h-index variants for every artist in the Billboard Hot 100 history
 (1958–present) and for six genre charts, using open datasets.
@@ -47,6 +47,7 @@ GENRE_CHARTS_OPTIONAL = [
     ("Country Airplay",    "country_airplay.csv"),
     ("Gospel",             "gospel.csv"),
     ("Jazz",               "jazz.csv"),
+    ("Alternative",        "alternative.csv"),
 ]
 
 # URL-safe key for each chart (used in data/<key>[_<period>].json filenames)
@@ -63,6 +64,7 @@ CHART_KEYS = {
     "Country Airplay":    "country_airplay",
     "Gospel":             "gospel",
     "Jazz":               "jazz",
+    "Alternative":        "alternative",
 }
 
 # (period_key, years_back) — None means all-time
@@ -308,8 +310,8 @@ def save_chart_data(payload: dict, path: Path):
 # ── HTML patching ──────────────────────────────────────────────────────────────
 
 def update_html_genre_summary(genre_summary: list):
-    """Patch the GENRE_SUMMARY constant in billboard_hindex.html in-place."""
-    html_path = Path(__file__).parent / "billboard_hindex.html"
+    """Patch the GENRE_SUMMARY constant in bibbloard.html in-place."""
+    html_path = Path(__file__).parent / "bibbloard.html"
     if not html_path.exists():
         print(f"  ⚠ {html_path} not found — skipping HTML update")
         return
@@ -322,10 +324,10 @@ def update_html_genre_summary(genre_summary: list):
         flags=re.DOTALL,
     )
     if n == 0:
-        print("  ⚠ GENRE_SUMMARY not found in billboard_hindex.html — no changes made")
+        print("  ⚠ GENRE_SUMMARY not found in bibbloard.html — no changes made")
     else:
         html_path.write_text(new_text, encoding="utf-8")
-        print("  Updated → billboard_hindex.html (GENRE_SUMMARY)")
+        print("  Updated → bibbloard.html (GENRE_SUMMARY)")
 
 
 
@@ -351,8 +353,8 @@ def main():
     print_ranking("HOT 100 — PEAK H-INDEX  (all time)", pr_all, TOP_N)
     OUTPUT_DIR.mkdir(exist_ok=True)
     print("\nSaving Hot 100 CSVs …")
-    save_csv(OUTPUT_DIR / "billboard_hindex_weeks.csv", wr_all, "weeks_hindex")
-    save_csv(OUTPUT_DIR / "billboard_hindex_peak.csv",  pr_all, "peak_hindex")
+    save_csv(OUTPUT_DIR / "bibbloard_weeks.csv", wr_all, "weeks_hindex")
+    save_csv(OUTPUT_DIR / "bibbloard_peak.csv",  pr_all, "peak_hindex")
 
     print(f"\nGenerating Hot 100 data files … (chart_size={hot100_size})")
     hot100_periods = {}
@@ -425,7 +427,7 @@ def main():
 
     print("\nUpdating HTML …")
     update_html_genre_summary(genre_summary)
-    print("\nDone. Open: http://localhost:7433/billboard_hindex.html")
+    print("\nDone. Open: http://localhost:7433/bibbloard.html")
 
 
 if __name__ == "__main__":
