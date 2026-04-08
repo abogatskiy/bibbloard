@@ -11,8 +11,8 @@ CLAUDE.md
 DEPLOYMENT.md
 deploy.sh
 
-# Large raw data files — live in raw/ (downloaded/scraped locally)
-raw/
+# Raw data — tracked in repo for preservation (CSVs scraped, all.json downloaded)
+# all.json (~42MB) and CSVs (~38MB) are safe under GitHub's 100MB file limit
 
 # Generated output CSVs
 output/

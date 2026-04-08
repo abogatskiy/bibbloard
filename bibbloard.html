@@ -222,7 +222,7 @@ footer strong{color:var(--text)}
   </div>
 
   <p class="byline">
-    Hot&nbsp;100: 3,531 weekly charts (1958&ndash;2026)
+    <span id="byline-hot100">Hot&nbsp;100</span>
     <span class="sep">&middot;</span>
     Data: <a href="https://github.com/mhollingshead/billboard-hot-100">mhollingshead/billboard-hot-100</a>
     <span class="sep">&middot;</span>
@@ -245,7 +245,7 @@ footer strong{color:var(--text)}
         <h3>What is the h-h-index?</h3>
         <p>The <strong>h-h-index</strong> of a chart is the h-index of all the individual h-indices — the largest <em>h</em> such that at least <em>h</em> artists each have h-index &ge;&thinsp;<em>h</em>. It measures how deep the chart's artist pool runs overall.</p>
         <h3>Data coverage</h3>
-        <p>Hot&nbsp;100: 1958&ndash;2026. Genre charts via <a href="https://github.com/pdp2600/chartscraper">chartscraper</a>: Hip-Hop (1958&ndash;2018), Latin (1986&ndash;2018), Pop (1992&ndash;2018), Country (2011&ndash;2018), Rock (2009&ndash;2018), Dance/Electronic (2013&ndash;2018). Weeks counts reflect actual chart appearances in the selected time window, not cumulative weeks-on-chart totals.</p>
+        <p id="data-coverage-text">Loading…</p>
       </div>
     </div>
   </details>
@@ -922,6 +922,25 @@ document.getElementById('n-select').addEventListener('change', () => {
 });
 
 loadChart();
+
+// ── Data coverage text ────────────────────────────────────────────────────────
+(function() {
+  const parts = GENRE_SUMMARY.map(g => {
+    const p = g.periods?.all;
+    if (!p) return null;
+    const y1 = g.earliest ? g.earliest.slice(0,4) : '?';
+    const y2 = g.latest   ? g.latest.slice(0,4)   : '?';
+    // Update byline span for Hot 100
+    if (g.key === 'hot100') {
+      const bl = document.getElementById('byline-hot100');
+      if (bl) bl.textContent = `Hot\u00a0100\u00a0(${y1}\u2013${y2})`;
+    }
+    return `${g.genre}\u00a0(${y1}\u2013${y2})`;
+  }).filter(Boolean);
+  const el = document.getElementById('data-coverage-text');
+  if (el) el.innerHTML = parts.join(', ') +
+    '. Weeks counts reflect actual chart appearances in the selected time window, not cumulative totals.';
+})();
 </script>
 </body>
 </html>
