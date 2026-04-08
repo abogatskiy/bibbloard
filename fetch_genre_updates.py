@@ -71,7 +71,7 @@ CHARTS = [
 ]
 
 # Adaptive delay configuration
-DELAY_START   = 0.5    # seconds (fast initial pace)
+DELAY_START   = 0.0    # seconds (no delay unless rate-limited)
 DELAY_MAX     = 30.0   # cap on backoff
 DELAY_BACKOFF = 2.0    # multiply on rate-limit hit
 DELAY_RECOVER = 0.85   # multiply on success (gradual recovery)
@@ -352,8 +352,8 @@ def fetch_chart(name: str, slug: str, filename: str,
                 total_entries += n
                 pct = f"{(i+1)/len(week_dates)*100:.0f}%"
                 print(f"  [{pct:>4}] {actual}  +{n} entries  delay={delay:.2f}s")
-                # Gradually recover speed on success
-                delay = max(start_delay, delay * DELAY_RECOVER)
+                # Gradually recover speed after a backoff
+                delay = max(0.0, delay * DELAY_RECOVER)
             else:
                 skipped += 1
                 print(f"  [skip] {actual}  (date snapped to existing week)")
