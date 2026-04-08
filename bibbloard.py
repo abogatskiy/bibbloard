@@ -533,6 +533,15 @@ def build_chart_payload(weeks_ranking, peak_ranking, artist_songs, hhw, hhp,
     w_vel = {a: get_velocity(a, w_tl) for a, _, _ in table_w} if rows else {}
     p_vel = {a: get_velocity(a, p_tl) for a, _, _ in table_p} if rows else {}
 
+    # Compact curve values for table artists not already in the top-N plot data.
+    # These let the frontend draw a curve for any filtered/highlighted artist.
+    w_top_set = {a for a, _, _ in weeks_ranking[:TOP_PLOT]}
+    p_top_set = {a for a, _, _ in peak_ranking[:TOP_PLOT]}
+    weeks_extra = {a: curve_values(a, artist_songs, "weeks")[0]
+                   for a, _, _ in table_w if a not in w_top_set}
+    peak_extra  = {a: curve_values(a, artist_songs, "peak")[0]
+                   for a, _, _ in table_p if a not in p_top_set}
+
     return {
         "hhw": hhw, "hhp": hhp,
         "chart_size": chart_size,
@@ -541,6 +550,8 @@ def build_chart_payload(weeks_ranking, peak_ranking, artist_songs, hhw, hhp,
         "peak":       plot_data(peak_ranking,  "peak"),
         "weeksTable": [[r, a, h, n, w_vel.get(a, 0)] for r, (a, h, n) in enumerate(table_w, 1)],
         "peakTable":  [[r, a, h, n, p_vel.get(a, 0)] for r, (a, h, n) in enumerate(table_p, 1)],
+        "weeksCurves": weeks_extra,
+        "peakCurves":  peak_extra,
         "timelines":  timelines,
     }
 
