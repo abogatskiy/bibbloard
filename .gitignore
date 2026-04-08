@@ -14,9 +14,8 @@ deploy.sh
 # Large raw data files — live in raw/ (downloaded/scraped locally)
 raw/
 
-# Generated CSVs
-billboard_hindex_weeks.csv
-billboard_hindex_peak.csv
+# Generated output CSVs
+output/
 
 # macOS
 .DS_Store

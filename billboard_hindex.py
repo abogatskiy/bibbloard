@@ -76,7 +76,8 @@ PERIODS = [
     ("30y", 30),
 ]
 
-DATA_DIR  = Path("data")
+DATA_DIR   = Path("data")
+OUTPUT_DIR = Path("output")
 TOP_N     = 100   # artists printed in console ranking
 TOP_PLOT  = 30    # artists included in chart JSON (client filters to 10/20/30)
 TOP_TABLE = 200   # rows in HTML ranking tables
@@ -348,9 +349,10 @@ def main():
     wr_all, pr_all    = compute_rankings(hot100_all, hot100_size)
     print_ranking("HOT 100 — WEEKS H-INDEX (all time)", wr_all, TOP_N)
     print_ranking("HOT 100 — PEAK H-INDEX  (all time)", pr_all, TOP_N)
+    OUTPUT_DIR.mkdir(exist_ok=True)
     print("\nSaving Hot 100 CSVs …")
-    save_csv("billboard_hindex_weeks.csv", wr_all, "weeks_hindex")
-    save_csv("billboard_hindex_peak.csv",  pr_all, "peak_hindex")
+    save_csv(OUTPUT_DIR / "billboard_hindex_weeks.csv", wr_all, "weeks_hindex")
+    save_csv(OUTPUT_DIR / "billboard_hindex_peak.csv",  pr_all, "peak_hindex")
 
     print(f"\nGenerating Hot 100 data files … (chart_size={hot100_size})")
     hot100_periods = {}
