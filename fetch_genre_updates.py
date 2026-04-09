@@ -510,7 +510,7 @@ def fetch_chart(name: str, slug: str, filename: str,
                 except Exception:
                     returned.append(None)
             # If both probes returned the same already-known date, the API has no history
-            if len(set(returned)) == 1 and returned[0] in existing_dates:
+            if len(set(returned)) == 1 and returned[0] in existing:
                 print(f"redirects to '{returned[0]}' — no historical data available, skipping.")
                 hist_dates = []
             else:
