@@ -792,16 +792,20 @@ function hindexTrace(data, name, color, latestDate, frac) {
 }
 
 // ── Gaussian-smoothed velocity trace ─────────────────────────────────────────
-// The h-index is a step function; its derivative is a sum of unit impulses at
-// each change-point date.  Convolving with a Gaussian of width σ gives a smooth
-// "rate of h-index gain" curve with units of h-index points per year.
+// The h-index is a step function; its derivative is a sum of impulses weighted
+// by Δh at each change-point.  Convolving with a Gaussian of width σ gives a
+// smooth "rate of h-index gain" curve with units of h-index points per year.
+// Weighting by Δh (not by 1) is essential for the fractional integrated metric,
+// where h changes by tiny amounts each week rather than in unit steps.
 function velocityTrace(data, name, color, latestDate, sigmaWeeks) {
   if (!data || !data.d || !data.d.length) return null;
   const MS_PER_YEAR = 365.25 * 86400 * 1000;
   const sigma_ms    = sigmaWeeks * 7 * 86400 * 1000;
   const norm        = MS_PER_YEAR / (sigma_ms * Math.sqrt(2 * Math.PI));
 
-  const changeTs = data.d.map(d => +new Date(d));
+  const changeTs     = data.d.map(d => +new Date(d));
+  // Δh at each change-point (first point: h went from 0 to h[0])
+  const changeDeltas = data.h.map((h, i) => i === 0 ? h : h - data.h[i - 1]);
   const tMin = changeTs[0];
   const tMax = latestDate ? +new Date(latestDate) : changeTs[changeTs.length - 1];
 
@@ -810,9 +814,9 @@ function velocityTrace(data, name, color, latestDate, sigmaWeeks) {
   const xs = [], ys = [];
   for (let t = tMin; t <= tMax + step; t += step) {
     let v = 0;
-    for (const ct of changeTs) {
-      const z = (t - ct) / sigma_ms;
-      v += Math.exp(-0.5 * z * z);
+    for (let i = 0; i < changeTs.length; i++) {
+      const z = (t - changeTs[i]) / sigma_ms;
+      v += changeDeltas[i] * Math.exp(-0.5 * z * z);
     }
     xs.push(new Date(t).toISOString().slice(0, 10));
     ys.push(+(v * norm).toFixed(3));
