@@ -613,6 +613,7 @@ function createPlot(divId, curves, yLabel, chartSize) {
     const plotEl = document.getElementById(divId);
     plotEl.on('plotly_hover', evData => {
       const pt       = evData.points[0];
+      if (!pt.data.name) return;   // h-index marker trace — no popup
       const cd       = pt.data.customdata?.[pt.pointIndex];
       const songName = cd?.[0] ?? '';
       const year     = cd?.[1] ?? '';
@@ -647,25 +648,43 @@ function createPlot(divId, curves, yLabel, chartSize) {
 // ── Song mini-chart SVG (integrated plot popup) ───────────────────────────
 function songMiniSvg(details, barColor) {
   const scores = details.s, pk = details.pk, n = scores.length;
-  const maxS = Math.max(...scores);
-  if (!maxS || !n) return '';
-  const norm  = scores.map(s => s / maxS);
-  const W = 160, H = 72, padL = 4, padB = 16, padT = 13;
-  const plotH = H - padB - padT;
-  const barW  = Math.max(1, Math.floor((W - padL) / n) - 1);
+  if (!n) return '';
+  // scores are (cs−pos)/cs ∈ [0,1); full chart range → y-axis is 0..1, no per-song normalisation
+  const peakScore = Math.max(...scores);   // score of the peak week
+  if (!peakScore) return '';
+  const W = 188, H = 78, padL = 4, padR = 34, padB = 14, padT = 10;
+  const plotW = W - padL - padR, plotH = H - padB - padT;
+  const barW  = Math.max(1, Math.floor(plotW / n) - 1);
   const cs    = getComputedStyle(document.documentElement);
   const fg    = cs.getPropertyValue('--text').trim()  || '#333';
   const muted = cs.getPropertyValue('--muted').trim() || '#888';
-  const bars  = norm.map((v, i) => {
-    const bh = Math.max(1, Math.round(v * plotH));
+
+  // Bars: height proportional to raw score (full 0–1 chart range)
+  const bars = scores.map((s, i) => {
+    const bh = Math.max(1, Math.round(s * plotH));
     const x  = padL + i * (barW + 1);
     return `<rect x="${x}" y="${padT + plotH - bh}" width="${barW}" height="${bh}" fill="${barColor}" opacity=".75"/>`;
   }).join('');
+
+  // Dashed horizontal line at the peak score level
+  const pkY   = padT + Math.round(plotH * (1 - peakScore));
+  const topY  = padT;  // y=1.0 → chart position #1
+  const dashLine = `<line x1="${padL}" y1="${pkY}" x2="${padL + plotW}" y2="${pkY}"` +
+    ` stroke="${muted}" stroke-width="1" stroke-dasharray="3,2"/>`;
+
+  // Right-side labels: #1 at top, #pk at the dashed line
+  const lx = padL + plotW + 4;
+  const topLabel = `<text x="${lx}" y="${topY + 4}" font-size="8" fill="${muted}" font-family="Georgia,serif" dominant-baseline="middle">#1</text>`;
+  // Only draw #pk label if it won't overlap #1 label (need ≥ 10px gap)
+  const pkLabel = (pkY - topY >= 10)
+    ? `<text x="${lx}" y="${pkY}" font-size="8" fill="${fg}" font-family="Georgia,serif" dominant-baseline="middle">#${pk}</text>`
+    : '';
+
+  // Bottom: week count
+  const wkLabel = `<text x="${padL + plotW / 2}" y="${H - 2}" text-anchor="middle" font-size="9" fill="${muted}" font-family="Georgia,serif">${n} wk${n===1?'':'s'}</text>`;
+
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" style="display:block">` +
-    bars +
-    `<text x="${W/2}" y="${H-2}" text-anchor="middle" font-size="9" fill="${muted}" font-family="Georgia,serif">${n} wk${n===1?'':'s'}</text>` +
-    `<text x="${W-2}" y="11" text-anchor="end" font-size="9" fill="${fg}" font-family="Georgia,serif">#${pk}</text>` +
-    `</svg>`;
+    bars + dashLine + topLabel + pkLabel + wkLabel + `</svg>`;
 }
 
 function velocityColor(v) {
