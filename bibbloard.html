@@ -484,7 +484,10 @@ function createPlot(divId, curves, yLabel, chartSize) {
   const maxY     = Math.max(...curves.map(c => c.values[0] ?? 0));
   const maxX     = Math.max(...curves.map(c => c.values.length));
   const scoreRange = chartSize || maxY;
-  const xClip    = maxX < scoreRange * 0.4 ? scoreRange + 5 : Math.min(maxX + 4, scoreRange + 5);
+  // If scores are much larger than the song count (integrated metric), clip x to data.
+  const xClip = (scoreRange > maxX * 4)
+    ? maxX + 4
+    : (maxX < scoreRange * 0.4 ? scoreRange + 5 : Math.min(maxX + 4, scoreRange + 5));
   const diagEnd  = xClip;
 
   // Diagonal y = x
