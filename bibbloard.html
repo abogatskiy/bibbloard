@@ -440,6 +440,13 @@ const COLORS = [
   '#c49c94','#e377c2','#f7b6d2','#7f7f7f','#c7c7c7',
   '#bcbd22','#dbdb8d','#17becf','#9edae5','#393b79',
 ];
+// ── Stable per-artist color (consistent across all three plots) ───────────────
+function artistColor(name) {
+  let h = 5381;
+  for (let i = 0; i < name.length; i++) h = Math.imul(h, 33) ^ name.charCodeAt(i);
+  return COLORS[(h >>> 0) % COLORS.length];
+}
+
 const _expandedArtists = new Set();
 const _filterQuery = { combined: '' };
 const _sortState = {
@@ -509,8 +516,7 @@ function createPlot(divId, curves, yLabel, chartSize) {
       const ec   = extraCurves?.[artist];
       const row  = combinedMap.get(artist);
       if (ec && row) {
-        const color = COLORS[(row[0] - 1) % COLORS.length];
-        extras.push({artist, h: row[hIdx], n: row[8], color,
+        extras.push({artist, h: row[hIdx], n: row[8], color: artistColor(artist),
                      values: ec.v, songs: ec.s ?? [], years: ec.y ?? []});
       }
     }
@@ -537,7 +543,8 @@ function createPlot(divId, curves, yLabel, chartSize) {
   // Artist curves — record trace index for hover highlighting
   _traceIndex[divId] = {};
   for (const c of curves) {
-    const hl = highlighted.has(c.artist);
+    const hl    = highlighted.has(c.artist);
+    const color = artistColor(c.artist);
     _traceIndex[divId][c.artist] = traces.length;  // index of this line trace
     const x = c.values.map((_, i) => i + 1);
     const hasSongs = c.songs && c.songs.length > 0;
@@ -551,7 +558,7 @@ function createPlot(divId, curves, yLabel, chartSize) {
       x, y: c.values,
       name: c.artist,
       mode: 'lines',
-      line: {color: c.color, width: hl ? 4.5 : 2.2},
+      line: {color, width: hl ? 4.5 : 2.2},
       showlegend: true,
       customdata,
       hovertemplate: '<b>' + c.artist + '</b>' + songLine +
@@ -573,6 +580,7 @@ function createPlot(divId, curves, yLabel, chartSize) {
   for (const g of mkGroups.values()) {
     const hl    = g.entries.some(c => highlighted.has(c.artist));
     const top   = g.entries[0];   // highest-ranked artist in this group
+    const topColor = artistColor(top.artist);
     const hover = g.entries.map(c =>
       '<b>' + c.artist + '</b>\u00a0h\u2011index\u00a0=\u00a0' + c.h
     ).join('<br>');
@@ -580,12 +588,12 @@ function createPlot(divId, curves, yLabel, chartSize) {
     // Used by the integrated-plot popup handler to show marker hover info.
     const meta = g.entries.map(c => {
       const hDisp = Number.isInteger(c.h) ? String(c.h) : c.h.toFixed(1);
-      return c.artist + '\t' + hDisp + '\t' + c.color;
+      return c.artist + '\t' + hDisp + '\t' + artistColor(c.artist);
     }).join('\n');
     traces.push({
       x: [g.x], y: [g.y],
       mode: 'markers',
-      marker: {color: top.color, size: hl ? 16 : 12, symbol: 'circle',
+      marker: {color: topColor, size: hl ? 16 : 12, symbol: 'circle',
                line: {color: col.bg, width: hl ? 3.5 : 2.5}},
       showlegend: false,
       customdata: [meta],
@@ -737,11 +745,6 @@ function velocityColor(v) {
 }
 
 // ── Timeline chart ────────────────────────────────────────────────────────────
-function artistColor(artist, metric) {
-  if (!_currentData) return null;
-  const arr = metric === 'weeks' ? _currentData.weeks : _currentData.peak;
-  return arr.find(c => c.artist === artist)?.color ?? null;
-}
 
 // ── H-index step-function trace ───────────────────────────────────────────────
 function hindexTrace(data, name, color, latestDate, frac) {
