@@ -9,7 +9,7 @@ An h-index for Billboard chart artists — because charting once doesn't make yo
 By analogy with the [academic h-index](https://en.wikipedia.org/wiki/H-index):
 
 - **Weeks h-index** — an artist has h-index *h* if they have at least *h* songs that each appeared on the chart for at least *h* weeks
-- **Peak h-index** — an artist has h-index *h* if they have at least *h* songs each with a chart score ≥ *h*, where score = chart size − peak position (so a #1 song scores 99 on the Hot 100, a #50 song scores 50, etc.)
+- **Peak h-index** — an artist has h-index *h* if they have at least *h* songs each placed at least *h* spots from the top (i.e. chart score = chart size − peak position ≥ *h*)
 
 Both metrics reward breadth *and* depth: you need many charting songs, and each one has to hold up.
 
@@ -18,21 +18,27 @@ Both metrics reward breadth *and* depth: you need many charting songs, and each 
 | Chart | Coverage |
 |---|---|
 | Hot 100 | 1958 – present |
-| Hip-Hop | 1958 – 2018 |
-| Latin | 1986 – 2018 |
-| Pop | 1992 – 2018 |
-| Country | 2011 – 2018 |
-| Rock | 2009 – 2018 |
-| Dance/Electronic | 2013 – 2018 |
+| Country | 1958 – present |
+| Hip-Hop | 1958 – present |
+| Latin | 1986 – present |
+| Pop | 1992 – present |
+| Country Airplay | 2000 – present |
+| Adult Pop | 2000 – present |
+| Adult Contemporary | 2000 – present |
+| Jazz | 2005 – present |
+| Gospel | 2005 – present |
+| Rock | 2009 – present |
+| Dance/Electronic | 2013 – present |
 
 The **genre h-h-index** table ranks the charts themselves: the largest *h* such that *h* artists on that chart have h-index ≥ *h*.
 
 ## Features
 
-- Filter by time window: all-time, last 5 / 10 / 15 / 20 / 25 / 30 years
-- Visual h-index curves (Plotly) showing the top 10 / 20 / 30 artists
-- Ranked tables with up to 200 artists
+- Filter by time window: all-time or since a given year (2000, 2005, 2010, 2015, 2020)
+- Visual h-index curves (Plotly) for the top 10 / 20 / 30 artists per chart
+- Combined ranked table with weeks h-index and peak h-index side by side
 - Clickable genre table — jump straight to any chart
+- Per-artist h-index timeline with optional velocity view
 
 ## Data sources
 
@@ -41,12 +47,25 @@ The **genre h-h-index** table ranks the charts themselves: the largest *h* such 
 
 ## Running locally
 
-```bash
-# Install dependencies (standard library only)
-python3 billboard_hindex.py   # downloads data, generates data/*.json
+`bibbloard.py` fetches raw chart data from the sources above, computes h-indices, and writes pre-generated JSON files to `data/`. Run it whenever you want to refresh the data:
 
-# Open in browser
-open billboard_hindex.html
+```bash
+python3 bibbloard.py
 ```
 
-The script downloads source data on first run (~42 MB for Hot 100) and caches it in `data/`. Subsequent runs are fast.
+The script downloads source data on first run (~42 MB for Hot 100) and caches it locally. Subsequent runs are fast.
+
+To view the site locally, serve it with a local HTTP server (required for `fetch()` to load the JSON files):
+
+```bash
+python3 -m http.server 8080
+# then open http://localhost:8080/bibbloard.html
+```
+
+## Deployment
+
+```bash
+./deploy.sh
+```
+
+Builds an ARM64 Docker image, pushes it to GitHub Container Registry, and updates the Portainer stack on a Raspberry Pi.
