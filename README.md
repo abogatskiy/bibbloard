@@ -10,8 +10,9 @@ By analogy with the [academic h-index](https://en.wikipedia.org/wiki/H-index):
 
 - **Weeks h-index** — an artist has h-index *h* if they have at least *h* songs that each appeared on the chart for at least *h* weeks
 - **Peak h-index** — an artist has h-index *h* if they have at least *h* songs each at least *h* spots from the end of the chart (i.e. chart size − peak position ≥ *h*, so a Hot 100 #1 scores 99)
+- **Integrated h-index** — an artist has h-index *h* if they have at least *h* songs each with a cumulative chart score ≥ *h* (sum of chart size − peak position across all charting weeks)
 
-Both metrics reward breadth *and* depth: you need many charting songs, and each one has to hold up.
+All three metrics reward breadth *and* depth: you need many charting songs, and each one has to hold up. The integrated variant additionally rewards longevity — a song that stays near the top for many weeks accumulates a much higher score than one that peaks and disappears.
 
 ## Charts covered
 
@@ -35,9 +36,9 @@ The **genre h-h-index** table ranks the charts themselves: the largest *h* such 
 ## Features
 
 - Filter by time window: all-time or since a given year (2000, 2005, 2010, 2015, 2020)
-- Visual h-index curves (Plotly) for the top 10 / 20 / 30 artists per chart
-- Combined ranked table with weeks h-index and peak h-index side by side
-- Clickable genre table — jump straight to any chart
+- Visual h-index curves (Plotly) for the top 10 / 20 / 30 artists per chart — weeks, peak, and integrated
+- Combined ranked table with all three h-indices side by side
+- Clickable genre table with h-h-index for all three metrics — jump straight to any chart
 - Per-artist h-index timeline with optional velocity view
 
 ## Data sources
