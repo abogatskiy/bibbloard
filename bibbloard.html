@@ -108,6 +108,13 @@ h1{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:3rem;le
   pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);min-width:168px}
 #integrated-plot .hovertext{display:none!important}
 
+/* ── Timeline hover popup (position:fixed so it escapes table clipping) ─── */
+#timeline-popup{display:none;position:fixed;z-index:999;background:var(--surface);
+  border:1px solid var(--border);border-radius:4px;padding:5px 8px;
+  pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);
+  font-size:.75rem;font-family:Georgia,serif;color:var(--text);min-width:160px}
+.timeline-plot .hovertext{display:none!important}
+
 /* ── Plots ────────────────────────────────────────────────────────────────── */
 .plots{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:1.5rem;margin-bottom:2rem}
 .plot-card-full{grid-column:1/-1;max-width:900px;margin-inline:auto;width:100%}
@@ -352,6 +359,7 @@ footer{
 
 </div>
 <div id="song-popup"></div>
+<div id="timeline-popup"></div>
 
 <script>
 // ── Genre summary (inlined — small data) ─────────────────────────────────────
@@ -884,6 +892,34 @@ function renderTimeline(artist, plotEl) {
     font: { family: 'Georgia, serif', size: 10, color: col.font },
     hovermode: 'x unified'
   }, { responsive: true, displayModeBar: false });
+
+  const tlPopup = document.getElementById('timeline-popup');
+  plotEl.on('plotly_hover', evData => {
+    const pts = evData.points;
+    if (!pts || !pts.length) return;
+    const rawDate = pts[0].x;
+    const dateLabel = new Date(rawDate).toLocaleDateString('en-US', {year:'numeric', month:'short'});
+    let html = `<div style="color:var(--muted);margin-bottom:3px;font-size:.7rem">${dateLabel}</div>`;
+    for (const pt of pts) {
+      const color = pt.data.line?.color || '#888';
+      const val   = pt.y;
+      const disp  = Math.abs(val) < 100 ? (Number.isInteger(val) ? val : parseFloat(val.toFixed(2))) : Math.round(val);
+      html += `<div style="display:flex;align-items:center;gap:.35rem;line-height:1.6">` +
+        `<span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block"></span>` +
+        `<span style="color:var(--muted);flex:1;white-space:nowrap">${pt.data.name}:</span>` +
+        `<span style="font-weight:bold">${disp}</span></div>`;
+    }
+    tlPopup.innerHTML = html;
+    tlPopup.style.display = 'block';
+    const ev = evData.event, vw = window.innerWidth, vh = window.innerHeight;
+    let lx = ev.clientX + 14, ty = ev.clientY - 20;
+    if (lx + 220 > vw) lx = ev.clientX - 224;
+    if (ty < 4) ty = 4;
+    if (ty + 100 > vh) ty = vh - 104;
+    tlPopup.style.left = lx + 'px';
+    tlPopup.style.top  = ty + 'px';
+  });
+  plotEl.on('plotly_unhover', () => { tlPopup.style.display = 'none'; });
 }
 
 // Re-render only the chart divs inside currently-expanded rows (avoids full table rebuild)
