@@ -417,8 +417,17 @@ def compute_artist_timelines(artists: list, rows: list, metric: str,
                 change_songs.append(song)
                 prev_h = h
 
+        # Merge consecutive change-points on the same date: keep the final h,
+        # accumulate all triggering songs so the tooltip can list them all.
         if change_dates:
-            result[artist] = {"d": change_dates, "h": change_h, "s": change_songs}
+            md, mh, ms = [change_dates[0]], [change_h[0]], [[change_songs[0]]]
+            for d, h, s in zip(change_dates[1:], change_h[1:], change_songs[1:]):
+                if d == md[-1]:
+                    mh[-1] = h          # update to latest h value
+                    ms[-1].append(s)    # accumulate song
+                else:
+                    md.append(d); mh.append(h); ms.append([s])
+            result[artist] = {"d": md, "h": mh, "s": ms}
         if tick:
             tick(artist)
 
