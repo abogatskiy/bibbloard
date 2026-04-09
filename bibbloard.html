@@ -180,7 +180,22 @@ thead th.sort-desc::after{content:' ▼';font-size:.6rem;color:var(--accent);opa
 footer{margin-top:2rem;font-size:.73rem;color:var(--muted);border-top:1px solid var(--sep);padding-top:1rem;line-height:1.75}
 footer strong{color:var(--text)}
 
-@media(max-width:860px){.plots,.tables{grid-template-columns:1fr}.hhbox{flex-wrap:wrap}}
+@media(max-width:860px){
+  .plots,.tables{grid-template-columns:1fr}
+  .hhbox{flex-wrap:wrap}
+}
+@media(max-width:600px){
+  .wrap{padding:1.2rem .75rem 3rem}
+  h1{font-size:2.2rem}
+  .selector-bar{gap:.4rem .5rem;font-size:.82rem}
+  .tbl-card{padding:.6rem .5rem;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tbl-header{gap:.4rem}
+  .tbl-card h2{font-size:.8rem;white-space:nowrap}
+  .tbl-filter{font-size:.74rem}
+  table{font-size:.72rem;min-width:280px}
+  .plot-box{height:240px}
+  footer{font-size:.7rem;gap:.3rem .5rem}
+}
 </style>
 </head>
 <body>
@@ -204,7 +219,7 @@ footer strong{color:var(--text)}
     <div class="tbl-card">
       <table><thead><tr>
         <th style="width:2rem" class="tr">#</th>
-        <th>Genre</th>
+        <th>Billboard chart</th>
         <th style="width:5.5rem" class="tr">Coverage</th>
         <th style="width:5rem" class="tr">Weeks H-H</th>
         <th style="width:5rem" class="tr">Peak H-H</th>
@@ -387,7 +402,7 @@ function updateGenreTable(period) {
     tbody.insertAdjacentHTML('beforeend',
       `<tr${active} onclick="selectChart('${g.key}')" style="cursor:pointer" title="View ${g.genre} chart">` +
       `<td class="tr dim">${i+1}</td><td>${g.genre}</td>` +
-      `<td class="tr dim" style="font-size:.8rem;letter-spacing:.01em">${g.coverage}</td>` +
+      `<td class="tr dim" style="font-size:.8rem;letter-spacing:.01em;white-space:nowrap">${g.coverage}</td>` +
       `<td class="tr">${hhw}</td><td class="tr">${hhp}</td></tr>`);
   });
 }
@@ -539,27 +554,39 @@ function createPlot(divId, curves, yLabel, chartSize) {
     }
   }
 
-  // Left-edge labels with spreading
+  // Labels inside the plot along the left edge, with a unified background shape
   const labelPts = curves
     .map(c => ({y: c.values[0] ?? 0, yl: c.values[0] ?? 0, artist: c.artist, color: c.color,
                 hl: highlighted.has(c.artist)}))
     .sort((a, b) => b.y - a.y);
   spreadLabels(labelPts, maxY * 0.105, maxY * 0.02, maxY * 0.98);
 
+  // Compute the label strip width as a fraction of the plot area
+  const lMargin = 42, rMargin = 15;
+  const containerW  = document.getElementById(divId).offsetWidth || 500;
+  const plotAreaW   = Math.max(containerW - lMargin - rMargin, 150);
+  const maxLabelPx  = Math.max(...curves.map(c =>
+    textWidth(c.artist, (highlighted.has(c.artist) ? '13' : '11') + 'px Georgia, serif'))) + 10;
+  const labelFrac   = Math.min(maxLabelPx / plotAreaW, 0.45);
+
   for (const lp of labelPts) {
-    const needsArrow = Math.abs(lp.yl - lp.y) > 0.5;
     annotations.push({
-      x: 0, xref: 'paper',
+      x: 0.005, xref: 'paper', xanchor: 'left',
       y: lp.yl, yref: 'y',
       text: lp.hl ? '<b>' + lp.artist + '</b>' : lp.artist,
-      showarrow: needsArrow,
-      ax: needsArrow ? 1    : undefined, axref: needsArrow ? 'x' : undefined,
-      ay: needsArrow ? lp.y : undefined, ayref: needsArrow ? 'y' : undefined,
-      arrowhead: 0, arrowwidth: 0.9, arrowcolor: lp.color,
-      xanchor: 'right', yanchor: 'middle',
+      showarrow: false,
+      yanchor: 'middle',
       font: {color: lp.color, size: lp.hl ? 13 : 11, family: 'Georgia, serif'}
     });
   }
+
+  // Single unified background rect behind all labels
+  const shapes = [{
+    type: 'rect', xref: 'paper', yref: 'paper',
+    x0: 0, x1: labelFrac, y0: 0, y1: 1,
+    fillcolor: col.bg, opacity: 1, line: {width: 0},
+    layer: 'above traces'
+  }];
 
   Plotly.newPlot(divId, traces, {
     xaxis: {
@@ -576,10 +603,10 @@ function createPlot(divId, curves, yLabel, chartSize) {
       zeroline: false, showline: true, linecolor: col.line,
       tickfont: {color: col.font}, titlefont: {color: col.font},
     },
-    annotations,
+    annotations, shapes,
     hovermode: 'closest',
     plot_bgcolor: col.bg, paper_bgcolor: col.bg,
-    margin: {t: 15, b: 58, l: Math.round(Math.max(...curves.map(c => textWidth(c.artist, '11px Georgia, serif'))) + 32), r: 15},
+    margin: {t: 15, b: 58, l: lMargin, r: rMargin},
     font: {family: 'Georgia, serif', size: 11, color: col.font}
   }, {responsive: true, displayModeBar: false});
 }
