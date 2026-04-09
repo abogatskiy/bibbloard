@@ -422,17 +422,27 @@ const _sortState = {
 let _timelineView  = 'hindex';   // 'hindex' | 'velocity'
 let _timelineSigma = 26;         // weeks
 
-// ── Label spreading (greedy top-down) ─────────────────────────────────────────
+// ── Label spreading (iterative two-pass, minimises displacement) ──────────────
 function spreadLabels(pts, minGap, yMin, yMax) {
   const n = pts.length;
-  const avail = yMax - yMin;
-  if (minGap * (n - 1) > avail) minGap = avail / Math.max(n - 1, 1);
-  pts[0].yl = Math.min(pts[0].y, yMax);
-  for (let i = 1; i < n; i++)
-    pts[i].yl = Math.min(pts[i].y, pts[i-1].yl - minGap);
-  if (pts[n-1].yl < yMin) {
-    const shift = yMin - pts[n-1].yl;
-    pts.forEach(p => p.yl += shift);
+  if (n === 0) return;
+  // Start at actual positions, clamped to valid range
+  pts.forEach(p => p.yl = Math.max(yMin, Math.min(yMax, p.y)));
+  for (let iter = 0; iter < 30; iter++) {
+    let moved = false;
+    // Top-down: push down if too close
+    for (let i = 1; i < n; i++) {
+      const need = pts[i-1].yl - minGap;
+      if (pts[i].yl > need) { pts[i].yl = need; moved = true; }
+    }
+    if (pts[n-1].yl < yMin) { pts[n-1].yl = yMin; moved = true; }
+    // Bottom-up: push up if too close
+    for (let i = n-2; i >= 0; i--) {
+      const need = pts[i+1].yl + minGap;
+      if (pts[i].yl < need) { pts[i].yl = need; moved = true; }
+    }
+    if (pts[0].yl > yMax) { pts[0].yl = yMax; moved = true; }
+    if (!moved) break;
   }
 }
 
@@ -552,7 +562,11 @@ function createPlot(divId, curves, yLabel, chartSize) {
     .map(c => ({y: c.values[0] ?? 0, yl: c.values[0] ?? 0, artist: c.artist, color: c.color,
                 hl: highlighted.has(c.artist)}))
     .sort((a, b) => b.y - a.y);
-  spreadLabels(labelPts, maxY * 0.105, maxY * 0.02, maxY * 0.98);
+  // Compute minGap from actual pixel height so labels stay near their true y-values
+  const plotH = document.getElementById(divId).offsetHeight || 400;
+  const plotAreaH = Math.max(plotH - 73, 80);   // subtract top(15)+bottom(58) margin
+  const minGap = maxY * 15 / plotAreaH;          // ~15px per label in data units
+  spreadLabels(labelPts, minGap, maxY * 0.02, maxY * 0.98);
 
   // Compute the label strip width as a fraction of the plot area
   const lMargin = 42, rMargin = 15;
