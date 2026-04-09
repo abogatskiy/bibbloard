@@ -527,16 +527,21 @@ function createPlot(divId, curves, yLabel, chartSize) {
     const hl = highlighted.has(c.artist);
     _traceIndex[divId][c.artist] = traces.length;  // index of this line trace
     const x = c.values.map((_, i) => i + 1);
-    const customdata = c.songs.map((s, i) => [s, c.years ? (c.years[i] ?? '') : '']);
+    const hasSongs = c.songs && c.songs.length > 0;
+    const customdata = hasSongs
+      ? c.songs.map((s, i) => [s, c.years?.[i] ?? ''])
+      : c.values.map(() => ['', '']);
+    const songLine = hasSongs
+      ? '<br><i>%{customdata[0]}</i><span style="opacity:.7"> (%{customdata[1]})</span>'
+      : '';
     traces.push({
       x, y: c.values,
       mode: 'lines',
       line: {color: c.color, width: hl ? 4.5 : 2.2},
       showlegend: false,
       customdata,
-      hovertemplate: '<b>' + c.artist + '</b><br><i>%{customdata[0]}</i>' +
-                     '<span style="opacity:.7"> (%{customdata[1]})</span><br>' +
-                     '#%{x} \u00b7 ' + yLabel + ': %{y}<extra></extra>'
+      hovertemplate: '<b>' + c.artist + '</b>' + songLine +
+                     '<br>#%{x} \u00b7 ' + yLabel + ': %{y}<extra></extra>'
     });
   }
 
