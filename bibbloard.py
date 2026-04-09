@@ -2,13 +2,15 @@
 """
 Bibbloard — Billboard H-Index Calculator
 ==============================
-Computes two h-index variants for every artist in the Billboard Hot 100 history
-(1958–present) and for six genre charts, using open datasets.
+Computes three h-index variants for every artist in the Billboard Hot 100 history
+(1958–present) and for twelve genre charts, using open datasets.
 
 H-Index definitions (by analogy with the academic h-index):
-  - Weeks h-index  : artist has h songs each appearing on the chart for ≥ h weeks
-  - Peak h-index   : artist has h songs each with chart score ≥ h
-                     (chart score = 100 − peak_position, so #1 → 99, #100 → 0)
+  - Weeks h-index      : artist has h songs each appearing on the chart for ≥ h weeks
+  - Peak h-index       : artist has h songs each with chart score ≥ h
+                         (chart score = chart_size − peak_position, so Hot 100 #1 → 99)
+  - Integrated h-index : artist has h songs each with cumulative chart score ≥ h
+                         (sum of chart_size − peak_position across all charting weeks)
 
 Data sources:
   Hot 100:  https://github.com/mhollingshead/billboard-hot-100
@@ -269,7 +271,7 @@ def deduplicate_rows(rows: list, since: str = None, until: str = None,
                  eras when the chart length changed (e.g. AC: 30→40 in 2004).
     first_year = calendar year of first chart appearance in the window.
     """
-    raw = {}   # (artist, song) -> [count, best_peak_score, first_date]
+    raw = {}   # (artist, song) -> [count, best_peak_score, integrated_score, first_date]
     for r in rows:
         if since and r["date"] < since:
             continue
@@ -283,18 +285,20 @@ def deduplicate_rows(rows: list, since: str = None, until: str = None,
         score = max(cs - peak, 0)
         key   = (r["artist"], r["song"])
         if key not in raw:
-            raw[key] = [1, score, r["date"]]
+            raw[key] = [1, score, score, r["date"]]
         else:
             raw[key][0] += 1
             if score > raw[key][1]:
-                raw[key][1] = score  # keep best (highest) score
+                raw[key][1] = score  # keep best (highest) peak score
+            raw[key][2] += score     # accumulate integrated score
 
     artist_songs = defaultdict(list)
-    for (artist, song), (weeks, peak_score, first_date) in raw.items():
+    for (artist, song), (weeks, peak_score, integrated_score, first_date) in raw.items():
         first_year = int(first_date[:4]) if first_date and len(first_date) >= 4 else None
         artist_songs[artist].append({
             "song": song, "weeks": weeks,
-            "peak_score": peak_score, "first_year": first_year,
+            "peak_score": peak_score, "integrated_score": integrated_score,
+            "first_year": first_year,
         })
     return dict(artist_songs)
 
@@ -312,6 +316,15 @@ def hindex_weeks(songs: list) -> int:
 def hindex_peak(songs: list) -> int:
     """Largest h s.t. h songs have peak_score ≥ h."""
     scores = sorted((s["peak_score"] for s in songs), reverse=True)
+    h = 0
+    for i, s in enumerate(scores, start=1):
+        if s >= i: h = i
+        else: break
+    return h
+
+def hindex_integrated(songs: list) -> int:
+    """Largest h s.t. h songs have integrated_score ≥ h."""
+    scores = sorted((s["integrated_score"] for s in songs), reverse=True)
     h = 0
     for i, s in enumerate(scores, start=1):
         if s >= i: h = i
@@ -340,18 +353,22 @@ def hh_index(ranking) -> int:
 # ── Rankings ───────────────────────────────────────────────────────────────────
 
 def compute_rankings(artist_songs: dict):
-    """Returns (weeks_ranking, peak_ranking) — sorted lists of (artist, h, n_songs)."""
-    weeks_ranking = []
-    peak_ranking  = []
+    """Returns (weeks_ranking, peak_ranking, integrated_ranking) — sorted lists of (artist, h, n_songs)."""
+    weeks_ranking      = []
+    peak_ranking       = []
+    integrated_ranking = []
     for artist, songs in artist_songs.items():
         hw = hindex_weeks(songs)
         hp = hindex_peak(songs)
+        hi = hindex_integrated(songs)
         n  = len(songs)
         weeks_ranking.append((artist, hw, n))
         peak_ranking.append( (artist, hp, n))
+        integrated_ranking.append((artist, hi, n))
     weeks_ranking.sort(key=lambda x: (-x[1], -x[2]))
     peak_ranking.sort( key=lambda x: (-x[1], -x[2]))
-    return weeks_ranking, peak_ranking
+    integrated_ranking.sort(key=lambda x: (-x[1], -x[2]))
+    return weeks_ranking, peak_ranking, integrated_ranking
 
 # ── Artist timelines ──────────────────────────────────────────────────────────
 
@@ -382,8 +399,9 @@ def compute_artist_timelines(artists: list, rows: list, metric: str,
             if tick: tick(artist)
             continue
 
-        song_weeks: dict = defaultdict(int)   # song -> cumulative weeks
-        song_score: dict = {}                 # song -> best peak_score so far
+        song_weeks:  dict = defaultdict(int)   # song -> cumulative weeks
+        song_score:  dict = {}                 # song -> best peak_score so far
+        song_iscore: dict = defaultdict(int)   # song -> cumulative integrated score
         change_dates: list = []
         change_h:     list = []
         change_songs: list = []
@@ -398,7 +416,17 @@ def compute_artist_timelines(artists: list, rows: list, metric: str,
                 for i, w in enumerate(counts, 1):
                     if w >= i: h = i
                     else:      break
-            else:
+            elif metric == "integrated":
+                cs    = chart_sizes.get(r["date"], 0) if chart_sizes else 0
+                pk    = r.get("peak", 0)
+                score = max(cs - pk, 0) if isinstance(pk, int) and 0 < pk <= cs else 0
+                song_iscore[song] += score
+                scores = sorted(song_iscore.values(), reverse=True)
+                h = 0
+                for i, s in enumerate(scores, 1):
+                    if s >= i: h = i
+                    else:      break
+            else:  # peak
                 cs    = chart_sizes.get(r["date"], 0) if chart_sizes else 0
                 pk    = r.get("peak", 0)
                 score = max(cs - pk, 0) if isinstance(pk, int) and 0 < pk <= cs else 0
@@ -470,6 +498,12 @@ def curve_values(artist: str, artist_songs: dict, metric: str):
             ((s["weeks"], s["song"], s.get("first_year")) for s in songs),
             reverse=True
         )
+    elif metric == "integrated":
+        triples = sorted(
+            ((s["integrated_score"], s["song"], s.get("first_year")) for s in songs
+             if s.get("integrated_score", 0) >= 1),
+            reverse=True
+        )
     else:
         triples = sorted(
             ((s["peak_score"], s["song"], s.get("first_year")) for s in songs
@@ -481,9 +515,9 @@ def curve_values(artist: str, artist_songs: dict, metric: str):
             [nm for _, nm, _ in triples],
             [yr for _, _, yr in triples])
 
-def build_chart_payload(weeks_ranking, peak_ranking, artist_songs, hhw, hhp,
+def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_songs, hhw, hhp, hhi,
                         chart_size: int = 100, rows: list = None, latest_date: str = "",
-                        period_since: str = None, tick_w=None, tick_p=None,
+                        period_since: str = None, tick_w=None, tick_p=None, tick_i=None,
                         chart_sizes: dict = None) -> dict:
     def plot_data(ranking, metric):
         out = []
@@ -496,18 +530,23 @@ def build_chart_payload(weeks_ranking, peak_ranking, artist_songs, hhw, hhp,
     # ── Timelines + velocity for all table artists ────────────────────────────
     table_w = weeks_ranking[:TOP_TABLE]
     table_p = peak_ranking[:TOP_TABLE]
-    all_artists = list({a for a, _, _ in table_w} | {a for a, _, _ in table_p})
+    table_i = integrated_ranking[:TOP_TABLE]
+    all_artists = list({a for a, _, _ in table_w} | {a for a, _, _ in table_p}
+                       | {a for a, _, _ in table_i})
 
     timelines: dict = {}
     if rows:
-        w_tl = compute_artist_timelines(all_artists, rows, "weeks", period_since, latest_date,
+        w_tl = compute_artist_timelines(all_artists, rows, "weeks",      period_since, latest_date,
                                         chart_sizes=chart_sizes, tick=tick_w)
-        p_tl = compute_artist_timelines(all_artists, rows, "peak",  period_since, latest_date,
+        p_tl = compute_artist_timelines(all_artists, rows, "peak",       period_since, latest_date,
                                         chart_sizes=chart_sizes, tick=tick_p)
+        i_tl = compute_artist_timelines(all_artists, rows, "integrated", period_since, latest_date,
+                                        chart_sizes=chart_sizes, tick=tick_i)
         for artist in all_artists:
             entry = {}
             if artist in w_tl: entry["w"] = w_tl[artist]
             if artist in p_tl: entry["p"] = p_tl[artist]
+            if artist in i_tl: entry["i"] = i_tl[artist]
             if entry:
                 timelines[artist] = entry
 
@@ -543,26 +582,33 @@ def build_chart_payload(weeks_ranking, peak_ranking, artist_songs, hhw, hhp,
 
     w_vel = {a: get_velocity(a, w_tl) for a, _, _ in table_w} if rows else {}
     p_vel = {a: get_velocity(a, p_tl) for a, _, _ in table_p} if rows else {}
+    i_vel = {a: get_velocity(a, i_tl) for a, _, _ in table_i} if rows else {}
 
     # Compact curve values for table artists not already in the top-N plot data.
     # These let the frontend draw a curve for any filtered/highlighted artist.
     w_top_set = {a for a, _, _ in weeks_ranking[:TOP_PLOT]}
     p_top_set = {a for a, _, _ in peak_ranking[:TOP_PLOT]}
-    weeks_extra = {a: dict(zip(("v","s","y"), curve_values(a, artist_songs, "weeks")))
-                   for a, _, _ in table_w if a not in w_top_set}
-    peak_extra  = {a: dict(zip(("v","s","y"), curve_values(a, artist_songs, "peak")))
-                   for a, _, _ in table_p if a not in p_top_set}
+    i_top_set = {a for a, _, _ in integrated_ranking[:TOP_PLOT]}
+    weeks_extra      = {a: dict(zip(("v","s","y"), curve_values(a, artist_songs, "weeks")))
+                        for a, _, _ in table_w if a not in w_top_set}
+    peak_extra       = {a: dict(zip(("v","s","y"), curve_values(a, artist_songs, "peak")))
+                        for a, _, _ in table_p if a not in p_top_set}
+    integrated_extra = {a: dict(zip(("v","s","y"), curve_values(a, artist_songs, "integrated")))
+                        for a, _, _ in table_i if a not in i_top_set}
 
     return {
-        "hhw": hhw, "hhp": hhp,
+        "hhw": hhw, "hhp": hhp, "hhi": hhi,
         "chart_size": chart_size,
         "latest_date": latest_date,
-        "weeks":      plot_data(weeks_ranking, "weeks"),
-        "peak":       plot_data(peak_ranking,  "peak"),
-        "weeksTable": [[r, a, h, n, w_vel.get(a, 0)] for r, (a, h, n) in enumerate(table_w, 1)],
-        "peakTable":  [[r, a, h, n, p_vel.get(a, 0)] for r, (a, h, n) in enumerate(table_p, 1)],
-        "weeksCurves": weeks_extra,
-        "peakCurves":  peak_extra,
+        "weeks":      plot_data(weeks_ranking,      "weeks"),
+        "peak":       plot_data(peak_ranking,        "peak"),
+        "integrated": plot_data(integrated_ranking,  "integrated"),
+        "weeksTable":      [[r, a, h, n, w_vel.get(a, 0)] for r, (a, h, n) in enumerate(table_w, 1)],
+        "peakTable":       [[r, a, h, n, p_vel.get(a, 0)] for r, (a, h, n) in enumerate(table_p, 1)],
+        "integratedTable": [[r, a, h, n, i_vel.get(a, 0)] for r, (a, h, n) in enumerate(table_i, 1)],
+        "weeksCurves":      weeks_extra,
+        "peakCurves":       peak_extra,
+        "integratedCurves": integrated_extra,
         "timelines":  timelines,
     }
 
@@ -659,9 +705,9 @@ def main():
                           for _, key, rows, _, _ in loaded_genres}
 
     # ── Export all-time Hot 100 CSVs (quick, before progress bar) ────────────
-    hot100_all     = deduplicate_rows(hot100_rows, chart_sizes=hot100_chart_sizes)
-    hot100_size    = compute_chart_size(hot100_chart_sizes)
-    wr_all, pr_all = compute_rankings(hot100_all)
+    hot100_all             = deduplicate_rows(hot100_rows, chart_sizes=hot100_chart_sizes)
+    hot100_size            = compute_chart_size(hot100_chart_sizes)
+    wr_all, pr_all, ir_all = compute_rankings(hot100_all)
     OUTPUT_DIR.mkdir(exist_ok=True)
     save_csv(OUTPUT_DIR / "bibbloard_weeks.csv", wr_all, "weeks_hindex")
     save_csv(OUTPUT_DIR / "bibbloard_peak.csv",  pr_all, "peak_hindex")
@@ -669,10 +715,10 @@ def main():
     # ── Pre-count total timeline-artist ticks for accurate ETA ───────────────
     total_ticks = 0
     for _, period_since in PERIODS:
-        total_ticks += 2 * _count_artists(hot100_rows, period_since)
+        total_ticks += 3 * _count_artists(hot100_rows, period_since)
     for _, _, rows, _, _ in loaded_genres:
         for _, period_since in PERIODS:
-            total_ticks += 2 * _count_artists(rows, period_since)
+            total_ticks += 3 * _count_artists(rows, period_since)
 
     # ── Main computation loop with progress bar ───────────────────────────────
     progress = Progress(total_ticks)
@@ -687,6 +733,10 @@ def main():
         _lbl["metric"] = "peak"
         progress.update(1, f"{_lbl['chart']} · {_lbl['period']} · peak  · {artist}")
 
+    def tick_i(artist: str):
+        _lbl["metric"] = "integrated"
+        progress.update(1, f"{_lbl['chart']} · {_lbl['period']} · intgr · {artist}")
+
     try:
         # ── Hot 100 ──────────────────────────────────────────────────────────
         hot100_periods: dict = {}
@@ -697,17 +747,18 @@ def main():
                                             chart_sizes=hot100_chart_sizes)
             if not artist_songs:
                 continue
-            cs       = compute_chart_size(hot100_chart_sizes, period_since)
-            wr, pr   = compute_rankings(artist_songs)
-            hhw      = hh_index(wr)
-            hhp      = hh_index(pr)
-            hot100_periods[period_key] = {"hhw": hhw, "hhp": hhp}
+            cs          = compute_chart_size(hot100_chart_sizes, period_since)
+            wr, pr, ir  = compute_rankings(artist_songs)
+            hhw         = hh_index(wr)
+            hhp         = hh_index(pr)
+            hhi         = hh_index(ir)
+            hot100_periods[period_key] = {"hhw": hhw, "hhp": hhp, "hhi": hhi}
             fname = "hot100.json" if period_key == "all" else f"hot100_{period_key}.json"
             save_chart_data(
-                build_chart_payload(wr, pr, artist_songs, hhw, hhp, cs,
+                build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
                                     rows=hot100_rows, latest_date=hot100_max,
                                     period_since=period_since,
-                                    tick_w=tick_w, tick_p=tick_p,
+                                    tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
                                     chart_sizes=hot100_chart_sizes),
                 DATA_DIR / fname)
 
@@ -723,17 +774,18 @@ def main():
                                                chart_sizes=gchart_sizes)
                 if not artist_songs:
                     continue
-                cs     = compute_chart_size(gchart_sizes, period_since)
-                wr, pr = compute_rankings(artist_songs)
-                hhw    = hh_index(wr)
-                hhp    = hh_index(pr)
-                genre_periods[period_key] = {"hhw": hhw, "hhp": hhp}
+                cs          = compute_chart_size(gchart_sizes, period_since)
+                wr, pr, ir  = compute_rankings(artist_songs)
+                hhw         = hh_index(wr)
+                hhp         = hh_index(pr)
+                hhi         = hh_index(ir)
+                genre_periods[period_key] = {"hhw": hhw, "hhp": hhp, "hhi": hhi}
                 fname  = f"{key}.json" if period_key == "all" else f"{key}_{period_key}.json"
                 save_chart_data(
-                    build_chart_payload(wr, pr, artist_songs, hhw, hhp, cs,
+                    build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
                                         rows=genre_rows, latest_date=genre_max,
                                         period_since=period_since,
-                                        tick_w=tick_w, tick_p=tick_p,
+                                        tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
                                         chart_sizes=gchart_sizes),
                     DATA_DIR / fname)
             genre_summary.append({
@@ -755,14 +807,15 @@ def main():
     })
     genre_summary.sort(key=lambda g: (-g["periods"]["all"]["hhw"], -g["periods"]["all"]["hhp"]))
 
-    print(f"\n{'═'*56}")
-    print(f"  {'Genre':<22}  {'Coverage':>14}  {'Weeks HH':>9}  {'Peak HH':>8}")
-    print(f"  {'-'*22}  {'-'*14}  {'-'*9}  {'-'*8}")
+    print(f"\n{'═'*68}")
+    print(f"  {'Genre':<22}  {'Coverage':>14}  {'Weeks HH':>9}  {'Peak HH':>8}  {'Int HH':>7}")
+    print(f"  {'-'*22}  {'-'*14}  {'-'*9}  {'-'*8}  {'-'*7}")
     for i, g in enumerate(genre_summary, 1):
         hhw  = g["periods"]["all"]["hhw"]
         hhp  = g["periods"]["all"]["hhp"]
+        hhi  = g["periods"]["all"].get("hhi", "?")
         span = f"{g['earliest'][:4]}–{g['latest'][:4]}"
-        print(f"  {i}. {g['genre']:<20}  {span:>14}  {hhw:>9}  {hhp:>8}")
+        print(f"  {i}. {g['genre']:<20}  {span:>14}  {hhw:>9}  {hhp:>8}  {hhi:>7}")
 
     update_html_genre_summary(genre_summary)
     print("\nDone ✓  open: http://localhost:7433/bibbloard.html")

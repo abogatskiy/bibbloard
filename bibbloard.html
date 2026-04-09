@@ -92,7 +92,7 @@ h1{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:3rem;le
 
 
 /* ── Plots ────────────────────────────────────────────────────────────────── */
-.plots{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:1.5rem;margin-bottom:2rem}
+.plots{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:1.5rem;margin-bottom:2rem}
 .plot-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.75rem .75rem .5rem}
 .plot-card h2{font-size:.9rem;padding:0 .25rem .1rem;margin-bottom:.08rem;color:var(--text)}
 .plot-card .desc{font-size:.75rem;color:var(--muted);padding:0 .25rem .4rem}
@@ -222,6 +222,7 @@ footer strong{color:var(--text)}
         <th>Billboard chart</th>
         <th style="width:5rem" class="tr">Weeks H-H</th>
         <th style="width:5rem" class="tr">Peak H-H</th>
+        <th style="width:4.5rem" class="tr">Int H-H</th>
       </tr></thead><tbody id="genre-tbody"></tbody></table>
     </div>
     <div class="tbl-card" style="font-size:.8rem;color:var(--muted);padding:1rem 1.2rem;line-height:1.75">
@@ -282,6 +283,11 @@ footer strong{color:var(--text)}
       <div class="desc" id="peak-desc"><em>h</em> songs each at least <em>h</em> spots from the end of the chart &middot; hover for details</div>
       <div id="peak-plot" class="plot-box"></div>
     </div>
+    <div class="plot-card">
+      <h2>Integrated H-Index &mdash; Top <span class="n-label">10</span></h2>
+      <div class="desc"><em>h</em> songs each with cumulative chart score &ge;&thinsp;<em>h</em> &middot; hover for details</div>
+      <div id="integrated-plot" class="plot-box"></div>
+    </div>
   </div>
 
   <!-- Artist ranking table -->
@@ -295,6 +301,7 @@ footer strong{color:var(--text)}
         <th style="width:2rem" class="tr">#</th>
         <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="weeksH" title="Weeks h-index">Wks H</th>
         <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="peakH" title="Peak h-index">Pk H</th>
+        <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="intH" title="Integrated h-index">Int H</th>
         <th style="width:3.2rem" class="tr sortable" data-table="combined" data-col="n">Songs</th>
         <th style="width:3.5rem" class="tr sortable" data-table="combined" data-col="velocity" title="Year-over-year change in weeks h-index">YoY</th>
         <th>Artist</th>
@@ -311,7 +318,7 @@ footer strong{color:var(--text)}
 
 <script>
 // ── Genre summary (inlined — small data) ─────────────────────────────────────
-const GENRE_SUMMARY = [{"genre":"Country","key":"country","periods":{"all":{"hhw":19,"hhp":34},"2020":{"hhw":8,"hhp":10},"2015":{"hhw":12,"hhp":15},"2010":{"hhw":15,"hhp":17},"2005":{"hhw":18,"hhp":20},"2000":{"hhw":19,"hhp":21}},"earliest":"1958-10-20","latest":"2026-03-28"},{"genre":"Country Airplay","key":"country_airplay","periods":{"all":{"hhw":19,"hhp":22},"2020":{"hhw":7,"hhp":8},"2015":{"hhw":12,"hhp":13},"2010":{"hhw":16,"hhp":17},"2005":{"hhw":19,"hhp":20},"2000":{"hhw":19,"hhp":22}},"earliest":"2000-01-01","latest":"2026-03-28"},{"genre":"Hot 100","key":"hot100","periods":{"all":{"hhw":18,"hhp":35},"2020":{"hhw":9,"hhp":23},"2015":{"hhw":12,"hhp":26},"2010":{"hhw":14,"hhp":28},"2005":{"hhw":16,"hhp":29},"2000":{"hhw":17,"hhp":30}},"earliest":"1958-08-04","latest":"2026-04-04"},{"genre":"Latin","key":"latin","periods":{"all":{"hhw":17,"hhp":23},"2020":{"hhw":7,"hhp":11},"2015":{"hhw":10,"hhp":13},"2010":{"hhw":13,"hhp":15},"2005":{"hhw":14,"hhp":16},"2000":{"hhw":15,"hhp":19}},"earliest":"1986-09-20","latest":"2026-03-28"},{"genre":"Hip-Hop","key":"hiphop","periods":{"all":{"hhw":14,"hhp":27},"2020":{"hhw":7,"hhp":17},"2015":{"hhw":10,"hhp":18},"2010":{"hhw":10,"hhp":19},"2005":{"hhw":11,"hhp":20},"2000":{"hhw":12,"hhp":20}},"earliest":"1958-10-20","latest":"2026-03-28"},{"genre":"Adult Pop","key":"adult_pop","periods":{"all":{"hhw":14,"hhp":14},"2020":{"hhw":8,"hhp":8},"2015":{"hhw":9,"hhp":9},"2010":{"hhw":12,"hhp":13},"2005":{"hhw":13,"hhp":14},"2000":{"hhw":14,"hhp":14}},"earliest":"2000-01-01","latest":"2026-03-28"},{"genre":"Pop","key":"pop","periods":{"all":{"hhw":13,"hhp":15},"2020":{"hhw":8,"hhp":8},"2015":{"hhw":9,"hhp":10},"2010":{"hhw":11,"hhp":13},"2005":{"hhw":12,"hhp":13},"2000":{"hhw":13,"hhp":14}},"earliest":"1992-10-03","latest":"2026-03-28"},{"genre":"Jazz","key":"jazz","periods":{"all":{"hhw":13,"hhp":15},"2020":{"hhw":7,"hhp":8},"2015":{"hhw":11,"hhp":11},"2010":{"hhw":13,"hhp":13},"2005":{"hhw":13,"hhp":15},"2000":{"hhw":13,"hhp":15}},"earliest":"2005-10-22","latest":"2026-03-28"},{"genre":"Rock","key":"rock","periods":{"all":{"hhw":12,"hhp":15},"2020":{"hhw":5,"hhp":8},"2015":{"hhw":9,"hhp":13},"2010":{"hhw":11,"hhp":15},"2005":{"hhw":12,"hhp":15},"2000":{"hhw":12,"hhp":15}},"earliest":"2009-06-20","latest":"2026-03-28"},{"genre":"Adult Contemporary","key":"adult_contemporary","periods":{"all":{"hhw":12,"hhp":11},"2020":{"hhw":6,"hhp":6},"2015":{"hhw":7,"hhp":8},"2010":{"hhw":10,"hhp":10},"2005":{"hhw":10,"hhp":11},"2000":{"hhw":12,"hhp":11}},"earliest":"2000-01-01","latest":"2026-03-28"},{"genre":"Gospel","key":"gospel","periods":{"all":{"hhw":10,"hhp":9},"2020":{"hhw":6,"hhp":6},"2015":{"hhw":8,"hhp":8},"2010":{"hhw":9,"hhp":8},"2005":{"hhw":10,"hhp":9},"2000":{"hhw":10,"hhp":9}},"earliest":"2005-03-19","latest":"2026-03-28"},{"genre":"Dance/Electronic","key":"dance_electronic","periods":{"all":{"hhw":7,"hhp":10},"2020":{"hhw":5,"hhp":8},"2015":{"hhw":6,"hhp":10},"2010":{"hhw":7,"hhp":10},"2005":{"hhw":7,"hhp":10},"2000":{"hhw":7,"hhp":10}},"earliest":"2013-01-26","latest":"2026-03-28"}];
+const GENRE_SUMMARY = [{"genre":"Country","key":"country","periods":{"all":{"hhw":19,"hhp":34,"hhi":42},"2020":{"hhw":8,"hhp":10,"hhi":10},"2015":{"hhw":12,"hhp":15,"hhi":16},"2010":{"hhw":15,"hhp":17,"hhi":19},"2005":{"hhw":18,"hhp":20,"hhi":23},"2000":{"hhw":19,"hhp":21,"hhi":23}},"earliest":"1958-10-20","latest":"2026-03-28"},{"genre":"Country Airplay","key":"country_airplay","periods":{"all":{"hhw":19,"hhp":22,"hhi":24},"2020":{"hhw":7,"hhp":8,"hhi":8},"2015":{"hhw":12,"hhp":13,"hhi":13},"2010":{"hhw":16,"hhp":17,"hhi":18},"2005":{"hhw":19,"hhp":20,"hhi":22},"2000":{"hhw":19,"hhp":22,"hhi":24}},"earliest":"2000-01-01","latest":"2026-03-28"},{"genre":"Hot 100","key":"hot100","periods":{"all":{"hhw":18,"hhp":35,"hhi":38},"2020":{"hhw":9,"hhp":23,"hhi":23},"2015":{"hhw":12,"hhp":26,"hhi":26},"2010":{"hhw":14,"hhp":28,"hhi":28},"2005":{"hhw":16,"hhp":29,"hhi":30},"2000":{"hhw":17,"hhp":30,"hhi":31}},"earliest":"1958-08-04","latest":"2026-04-04"},{"genre":"Latin","key":"latin","periods":{"all":{"hhw":17,"hhp":23,"hhi":28},"2020":{"hhw":7,"hhp":11,"hhi":11},"2015":{"hhw":10,"hhp":13,"hhi":14},"2010":{"hhw":13,"hhp":15,"hhi":16},"2005":{"hhw":14,"hhp":16,"hhi":18},"2000":{"hhw":15,"hhp":19,"hhi":20}},"earliest":"1986-09-20","latest":"2026-03-28"},{"genre":"Hip-Hop","key":"hiphop","periods":{"all":{"hhw":14,"hhp":27,"hhi":32},"2020":{"hhw":7,"hhp":17,"hhi":17},"2015":{"hhw":10,"hhp":18,"hhi":19},"2010":{"hhw":10,"hhp":19,"hhi":20},"2005":{"hhw":11,"hhp":20,"hhi":20},"2000":{"hhw":12,"hhp":20,"hhi":21}},"earliest":"1958-10-20","latest":"2026-03-28"},{"genre":"Adult Pop","key":"adult_pop","periods":{"all":{"hhw":14,"hhp":14,"hhi":16},"2020":{"hhw":8,"hhp":8,"hhi":8},"2015":{"hhw":9,"hhp":9,"hhi":10},"2010":{"hhw":12,"hhp":13,"hhi":13},"2005":{"hhw":13,"hhp":14,"hhi":14},"2000":{"hhw":14,"hhp":14,"hhi":16}},"earliest":"2000-01-01","latest":"2026-03-28"},{"genre":"Pop","key":"pop","periods":{"all":{"hhw":13,"hhp":15,"hhi":15},"2020":{"hhw":8,"hhp":8,"hhi":8},"2015":{"hhw":9,"hhp":10,"hhi":10},"2010":{"hhw":11,"hhp":13,"hhi":13},"2005":{"hhw":12,"hhp":13,"hhi":15},"2000":{"hhw":13,"hhp":14,"hhi":15}},"earliest":"1992-10-03","latest":"2026-03-28"},{"genre":"Jazz","key":"jazz","periods":{"all":{"hhw":13,"hhp":15,"hhi":16},"2020":{"hhw":7,"hhp":8,"hhi":8},"2015":{"hhw":11,"hhp":11,"hhi":12},"2010":{"hhw":13,"hhp":13,"hhi":14},"2005":{"hhw":13,"hhp":15,"hhi":16},"2000":{"hhw":13,"hhp":15,"hhi":16}},"earliest":"2005-10-22","latest":"2026-03-28"},{"genre":"Rock","key":"rock","periods":{"all":{"hhw":12,"hhp":15,"hhi":16},"2020":{"hhw":5,"hhp":8,"hhi":8},"2015":{"hhw":9,"hhp":13,"hhi":14},"2010":{"hhw":11,"hhp":15,"hhi":16},"2005":{"hhw":12,"hhp":15,"hhi":16},"2000":{"hhw":12,"hhp":15,"hhi":16}},"earliest":"2009-06-20","latest":"2026-03-28"},{"genre":"Adult Contemporary","key":"adult_contemporary","periods":{"all":{"hhw":12,"hhp":11,"hhi":13},"2020":{"hhw":6,"hhp":6,"hhi":6},"2015":{"hhw":7,"hhp":8,"hhi":9},"2010":{"hhw":10,"hhp":10,"hhi":11},"2005":{"hhw":10,"hhp":11,"hhi":12},"2000":{"hhw":12,"hhp":11,"hhi":13}},"earliest":"2000-01-01","latest":"2026-03-28"},{"genre":"Gospel","key":"gospel","periods":{"all":{"hhw":10,"hhp":9,"hhi":10},"2020":{"hhw":6,"hhp":6,"hhi":6},"2015":{"hhw":8,"hhp":8,"hhi":8},"2010":{"hhw":9,"hhp":8,"hhi":10},"2005":{"hhw":10,"hhp":9,"hhi":10},"2000":{"hhw":10,"hhp":9,"hhi":10}},"earliest":"2005-03-19","latest":"2026-03-28"},{"genre":"Dance/Electronic","key":"dance_electronic","periods":{"all":{"hhw":7,"hhp":10,"hhi":10},"2020":{"hhw":5,"hhp":8,"hhi":8},"2015":{"hhw":6,"hhp":10,"hhi":10},"2010":{"hhw":7,"hhp":10,"hhi":10},"2005":{"hhw":7,"hhp":10,"hhi":10},"2000":{"hhw":7,"hhp":10,"hhi":10}},"earliest":"2013-01-26","latest":"2026-03-28"}];
 
 // ── Dark mode ─────────────────────────────────────────────────────────────────
 function applyTheme(theme) {
@@ -369,8 +376,9 @@ function updateGenreTable(period) {
       : (g.earliest ? g.earliest.slice(0,4) : '?');
     return {genre: g.genre, key: g.key,
             hhw: hasData ? p.hhw : null, hhp: hasData ? p.hhp : null,
+            hhi: hasData ? (p.hhi ?? null) : null,
             y1, y2: g.latest ? g.latest.slice(0,4) : '?'};
-  }).sort((a, b) => (b.hhw ?? -1) - (a.hhw ?? -1) || (b.hhp ?? -1) - (a.hhp ?? -1));
+  }).sort((a, b) => (b.hhw ?? -1) - (a.hhw ?? -1) || (b.hhp ?? -1) - (a.hhp ?? -1) || (b.hhi ?? -1) - (a.hhi ?? -1));
 
   const tbody = document.getElementById('genre-tbody');
   tbody.innerHTML = '';
@@ -378,11 +386,12 @@ function updateGenreTable(period) {
     const active = g.key === currentKey ? ' class="genre-active"' : '';
     const hhw = g.hhw != null ? `<strong>${g.hhw}</strong>` : '<span class="dim">\u2014</span>';
     const hhp = g.hhp != null ? `<strong>${g.hhp}</strong>` : '<span class="dim">\u2014</span>';
+    const hhi = g.hhi != null ? `<strong>${g.hhi}</strong>` : '<span class="dim">\u2014</span>';
     tbody.insertAdjacentHTML('beforeend',
       `<tr${active} onclick="selectChart('${g.key}')" style="cursor:pointer" title="View ${g.genre} chart">` +
       `<td class="tr dim">${i+1}</td>` +
       `<td>${g.genre}<span class="dim" style="font-size:.8rem"> (${g.y1}\u2013${g.y2})</span></td>` +
-      `<td class="tr">${hhw}</td><td class="tr">${hhp}</td></tr>`);
+      `<td class="tr">${hhw}</td><td class="tr">${hhp}</td><td class="tr">${hhi}</td></tr>`);
   });
 }
 updateGenreTable('all');
@@ -419,7 +428,7 @@ function getExpandedArtistNames() {
 const _traceIndex = {};
 
 function highlightArtistInPlots(artist, on) {
-  for (const divId of ['weeks-plot', 'peak-plot']) {
+  for (const divId of ['weeks-plot', 'peak-plot', 'integrated-plot']) {
     const map = _traceIndex[divId];
     if (!map || !(artist in map)) continue;
     const idx = map[artist];
@@ -442,9 +451,15 @@ function createPlot(divId, curves, yLabel, chartSize) {
   // Inject highlighted artists that aren't already in the visible top-N curves
   if (highlighted.size && _currentData) {
     const inCurves   = new Set(curves.map(c => c.artist));
-    const fullData   = divId === 'weeks-plot' ? _currentData.weeks      : _currentData.peak;
-    const extraCurves= divId === 'weeks-plot' ? _currentData.weeksCurves: _currentData.peakCurves;
-    const tableData  = divId === 'weeks-plot' ? _currentData.weeksTable : _currentData.peakTable;
+    const fullData   = divId === 'weeks-plot'      ? _currentData.weeks
+                     : divId === 'integrated-plot' ? _currentData.integrated
+                     : _currentData.peak;
+    const extraCurves= divId === 'weeks-plot'      ? _currentData.weeksCurves
+                     : divId === 'integrated-plot' ? _currentData.integratedCurves
+                     : _currentData.peakCurves;
+    const tableData  = divId === 'weeks-plot'      ? _currentData.weeksTable
+                     : divId === 'integrated-plot' ? _currentData.integratedTable
+                     : _currentData.peakTable;
     const extras = [];
     for (const artist of highlighted) {
       if (inCurves.has(artist)) continue;
@@ -635,25 +650,30 @@ function sigmaLabel(weeks) {
 function renderTimeline(artist, plotEl) {
   const tl  = _currentData.timelines?.[artist];
   const col = plotColors();
-  if (!tl || (!tl.w && !tl.p)) {
+  if (!tl || (!tl.w && !tl.p && !tl.i)) {
     plotEl.innerHTML = '<em style="font-size:.8rem;color:var(--muted)">No timeline data available.</em>';
     return;
   }
   const latestDate = _currentData.latest_date || null;
   const wc = '#4e79a7';   // blue  — weeks h-index
   const pc = '#e15759';   // red   — peak h-index
+  const ic = '#59a14f';   // green — integrated h-index
 
   const traces = [];
   if (_timelineView === 'hindex') {
-    const wt = hindexTrace(tl.w, 'Weeks h-index', wc, latestDate);
-    const pt = hindexTrace(tl.p, 'Peak h-index',  pc, latestDate);
+    const wt = hindexTrace(tl.w, 'Weeks h-index',      wc, latestDate);
+    const pt = hindexTrace(tl.p, 'Peak h-index',       pc, latestDate);
+    const it = hindexTrace(tl.i, 'Integrated h-index', ic, latestDate);
     if (wt) traces.push(wt);
     if (pt) traces.push(pt);
+    if (it) traces.push(it);
   } else {
-    const wt = velocityTrace(tl.w, 'Weeks velocity', wc, latestDate, _timelineSigma);
-    const pt = velocityTrace(tl.p, 'Peak velocity',  pc, latestDate, _timelineSigma);
+    const wt = velocityTrace(tl.w, 'Weeks velocity',      wc, latestDate, _timelineSigma);
+    const pt = velocityTrace(tl.p, 'Peak velocity',       pc, latestDate, _timelineSigma);
+    const it = velocityTrace(tl.i, 'Integrated velocity', ic, latestDate, _timelineSigma);
     if (wt) traces.push(wt);
     if (pt) traces.push(pt);
+    if (it) traces.push(it);
   }
 
   if (!traces.length) {
@@ -705,8 +725,8 @@ function refreshAllTimelines() {
 }
 
 // ── Sort helpers ──────────────────────────────────────────────────────────────
-// Combined row format: [rank(0), artist(1), weeksH(2), peakH(3), n(4), velocity(5)]
-const COL_IDX = { artist: 1, weeksH: 2, peakH: 3, n: 4, velocity: 5 };
+// Combined row format: [rank(0), artist(1), weeksH(2), peakH(3), intH(4), n(5), velocity(6)]
+const COL_IDX = { artist: 1, weeksH: 2, peakH: 3, intH: 4, n: 5, velocity: 6 };
 
 function sortedRows(rows, state) {
   const idx = COL_IDX[state.col] ?? 0;
@@ -734,7 +754,7 @@ function fillTableRows(id, rows, tableKey) {
   const tbody = document.getElementById(id);
   tbody.innerHTML = '';
   rows.forEach((row, i) => {
-    const [, artist, weeksH, peakH, n, velocity] = row;
+    const [, artist, weeksH, peakH, intH, n, velocity] = row;
     const vel = velocity ?? 0;
     const velColor = velocityColor(vel);
     const velHtml  = vel > 0
@@ -746,6 +766,7 @@ function fillTableRows(id, rows, tableKey) {
       `<td class="tr dim">${i + 1}</td>` +
       `<td class="tr bld">${weeksH}</td>` +
       `<td class="tr bld">${peakH}</td>` +
+      `<td class="tr bld">${intH}</td>` +
       `<td class="tr dim">${n}</td>` +
       velHtml +
       `<td><span class="artist-link" data-artist="${escHtml(artist)}" data-table="${tableKey}">${escHtml(artist)}</span></td>` +
@@ -757,7 +778,7 @@ function fillTableRows(id, rows, tableKey) {
       const vlAct = _timelineView === 'velocity' ? ' active' : '';
       const sigDisp = _timelineView === 'velocity' ? 'flex' : 'none';
       tbody.insertAdjacentHTML('beforeend',
-        `<tr class="timeline-row"><td colspan="6">` +
+        `<tr class="timeline-row"><td colspan="7">` +
         `<div class="timeline-inner">` +
         `<div class="tl-controls">` +
         `<button class="tl-view-btn${hiAct}" data-view="hindex">H-Index</button>` +
@@ -834,10 +855,12 @@ function filterRows(rows, query) {
 function buildCombinedTable() {
   if (!_currentData) return [];
   const peakMap = new Map(_currentData.peakTable.map(r => [r[1], r]));
+  const intMap  = new Map((_currentData.integratedTable ?? []).map(r => [r[1], r]));
   return _currentData.weeksTable.map(r => {
     const peakRow = peakMap.get(r[1]);
-    // [rank, artist, weeksH, peakH, n, velocity]
-    return [r[0], r[1], r[2], peakRow?.[2] ?? 0, r[3], r[4]];
+    const intRow  = intMap.get(r[1]);
+    // [rank, artist, weeksH, peakH, intH, n, velocity]
+    return [r[0], r[1], r[2], peakRow?.[2] ?? 0, intRow?.[2] ?? 0, r[3], r[4]];
   });
 }
 
@@ -868,9 +891,9 @@ function loadMore() {
 function redrawPlots() {
   const n  = parseInt(document.getElementById('n-select').value);
   const cs = _currentData.chart_size || 100;
-  createPlot('weeks-plot', _currentData.weeks.slice(0, n), 'Weeks on chart');
-  createPlot('peak-plot',  _currentData.peak.slice(0, n),
-             'Distance from end of chart', cs);
+  createPlot('weeks-plot',      _currentData.weeks.slice(0, n), 'Weeks on chart');
+  createPlot('peak-plot',       _currentData.peak.slice(0, n), 'Distance from end of chart', cs);
+  createPlot('integrated-plot', (_currentData.integrated ?? []).slice(0, n), 'Cumulative chart score');
 }
 
 // ── Render a full payload ─────────────────────────────────────────────────────
@@ -926,7 +949,7 @@ document.querySelectorAll('thead th.sortable').forEach(th => {
     } else {
       state.col = col;
       state.asc = col === 'artist';
-      if (col === 'weeksH' || col === 'peakH' || col === 'n' || col === 'velocity') state.asc = false;
+      if (col === 'weeksH' || col === 'peakH' || col === 'intH' || col === 'n' || col === 'velocity') state.asc = false;
     }
     if (_currentData) renderTables();
   });
