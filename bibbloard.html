@@ -91,10 +91,11 @@ h1{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:3rem;le
 #loading{font-size:.78rem;color:var(--muted);display:none}
 
 
-/* ── Song mini-chart popup ───────────────────────────────────────────────── */
+/* ── Song mini-chart popup (replaces native tooltip on integrated plot) ──── */
 #song-popup{display:none;position:fixed;z-index:999;background:var(--surface);
-  border:1px solid var(--border);border-radius:4px;padding:5px 7px;
-  pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  border:1px solid var(--border);border-radius:4px;padding:6px 8px;
+  pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);min-width:168px}
+#integrated-plot .hovertext{display:none!important}
 
 /* ── Plots ────────────────────────────────────────────────────────────────── */
 .plots{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:1.5rem;margin-bottom:2rem}
@@ -600,20 +601,29 @@ function createPlot(divId, curves, yLabel, chartSize) {
     const plotEl = document.getElementById(divId);
     plotEl.on('plotly_hover', evData => {
       const pt       = evData.points[0];
-      const songName = pt.data.customdata?.[pt.pointIndex]?.[0];
-      if (!songName) return;
-      const details  = _intSongPos[pt.data.name]?.[songName];
-      if (!details)  return;
-      popup.innerHTML =
-        `<div style="font-size:.73rem;color:var(--muted);max-width:156px;overflow:hidden;` +
-        `text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px">${songName}</div>` +
-        songMiniSvg(details, pt.data.line.color);
+      const cd       = pt.data.customdata?.[pt.pointIndex];
+      const songName = cd?.[0] ?? '';
+      const year     = cd?.[1] ?? '';
+      const artist   = pt.data.name;
+      const color    = pt.data.line?.color ?? '#888';
+      const score    = (+pt.y).toFixed(1);
+      const details  = songName ? _intSongPos[artist]?.[songName] : null;
+
+      let html = `<div style="font-weight:600;font-size:.82rem;color:${color}">${artist}</div>`;
+      if (songName)
+        html += `<div style="font-size:.75rem;color:var(--text);margin:.1rem 0 .15rem"><i>${songName}</i>` +
+                (year ? ` <span style="color:var(--muted)">(${year})</span>` : '') + `</div>`;
+      html += `<div style="font-size:.7rem;color:var(--muted);margin-bottom:${details ? 4 : 0}px">#${pt.x} &middot; peak-equiv&nbsp;wks:&nbsp;${score}</div>`;
+      if (details) html += songMiniSvg(details, color);
+
+      popup.innerHTML = html;
       popup.style.display = 'block';
       const ev = evData.event, vw = window.innerWidth, vh = window.innerHeight;
-      let lx = ev.clientX + 14, ty = ev.clientY - 46;
-      if (lx + 182 > vw) lx = ev.clientX - 186;
+      let lx = ev.clientX + 14, ty = ev.clientY - 50;
+      if (lx + 190 > vw) lx = ev.clientX - 194;
       if (ty < 4) ty = 4;
-      if (ty + 110 > vh) ty = vh - 114;
+      const popH = popup.offsetHeight || 140;
+      if (ty + popH > vh) ty = vh - popH - 4;
       popup.style.left = lx + 'px';
       popup.style.top  = ty + 'px';
     });
