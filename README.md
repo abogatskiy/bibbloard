@@ -33,13 +33,21 @@ All three metrics reward breadth *and* depth: you need many charting songs, and 
 
 The **genre h-h-index** table ranks the charts themselves: the largest *h* such that *h* artists on that chart have h-index ≥ *h*.
 
+## Chart sizes and unified cs
+
+Charts differ in size: the Hot 100 has 100 slots per week; Dance/Electronic has only 50. This matters for the **peak h-index** — a #1 on Hot 100 scores 99, while a #1 on Dance/Electronic scores just 49, making raw peak scores incomparable across charts.
+
+The **Unified cs (100)** toggle normalises all charts to 100 slots so that every #1 scores 99, every #2 scores 98, etc., enabling fair cross-chart peak comparison. Weeks and integrated h-indices are already chart-size-neutral (weeks simply counts appearances; integrated divides by chart size each week) and are unaffected by this toggle.
+
 ## Features
 
 - Filter by time window: all-time or since a given year (2000, 2005, 2010, 2015, 2020)
+- **Unified cs (100)** toggle to normalise peak h-index across charts of different sizes
 - Visual h-index curves (Plotly) for the top 10 / 20 / 30 artists per chart — weeks, peak, and integrated
-- Combined ranked table with all three h-indices side by side
+- Combined ranked table with all three h-indices and year-over-year changes side by side
 - Clickable genre table with h-h-index for all three metrics — jump straight to any chart
 - Per-artist h-index timeline with optional velocity view
+- Hover tooltips on integrated plot show a mini bar chart of the song's weekly position trajectory
 
 ## Data sources
 
