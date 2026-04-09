@@ -556,9 +556,15 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
         return out
 
     # ── Per-song weekly positions for integrated mini-chart popups ───────────
+    # Cover all artists in the combined table (not just top-30), because any
+    # expanded/highlighted artist can be injected into the integrated plot.
     int_song_pos = {}
     if rows:
-        i30_set = {a for a, _, _ in integrated_ranking[:TOP_PLOT]}
+        i30_set = (
+            {a for a, _, _ in integrated_ranking[:TOP_TABLE]} |
+            {a for a, _, _ in weeks_ranking[:TOP_TABLE]} |
+            {a for a, _, _ in peak_ranking[:TOP_TABLE]}
+        )
         i30_needed = {
             a: {s["song"] for s in artist_songs[a] if s.get("integrated_score", 0) >= 1}
             for a in i30_set
@@ -714,7 +720,8 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
                         for a in u_union if a not in u_i_top and a in u_artist_songs}
 
         # Per-song weekly positions for unified integrated mini-chart popups
-        u_i30_set    = {a for a, _, _ in u_ir[:TOP_PLOT]}
+        # Cover all u_union artists so injected/highlighted artists work too
+        u_i30_set    = set(u_union)
         u_i30_needed = {
             a: {s["song"] for s in u_artist_songs[a] if s.get("integrated_score", 0) >= 1}
             for a in u_i30_set if a in u_artist_songs
