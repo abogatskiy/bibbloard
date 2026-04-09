@@ -641,6 +641,10 @@ def main():
         if rows is None or len(rows) == 0:
             skipped.append(genre_name)
             continue
+        # Skip charts with only a single week of data — h-indices would be trivially 1
+        if min_row_date(rows) == max_row_date(rows):
+            skipped.append(genre_name + " (single week)")
+            continue
         key = CHART_KEYS[genre_name]
         loaded_genres.append((genre_name, key, rows, min_row_date(rows), max_row_date(rows)))
 
