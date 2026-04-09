@@ -108,8 +108,10 @@ h1{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:3rem;le
   pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);min-width:168px}
 #integrated-plot .hovertext{display:none!important}
 
-/* ── Timeline: let Plotly tooltip overflow the SVG and stack above other rows */
-.timeline-plot svg{overflow:visible}
+/* ── Timeline: let Plotly tooltip overflow all containers and stack above rows */
+.timeline-plot .plot-container,
+.timeline-plot .svg-container{overflow:visible!important}
+.timeline-plot svg{overflow:visible!important}
 .timeline-inner{position:relative;z-index:10}
 
 /* ── Plots ────────────────────────────────────────────────────────────────── */
