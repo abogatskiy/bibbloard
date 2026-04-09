@@ -608,7 +608,7 @@ function artistColor(artist, metric) {
 }
 
 // ── H-index step-function trace ───────────────────────────────────────────────
-function hindexTrace(data, name, color, latestDate) {
+function hindexTrace(data, name, color, latestDate, frac) {
   if (!data || !data.d || !data.d.length) return null;
   const xs = [...data.d];
   const ys = [...data.h];
@@ -625,9 +625,10 @@ function hindexTrace(data, name, color, latestDate) {
     ys.push(ys[ys.length - 1]);
     ss.push('');
   }
+  const yFmt = frac ? '%{y:.1f}' : '%{y}';
   return { x: xs, y: ys, customdata: ss, mode: 'lines', name,
            line: { shape: 'hv', color, width: 2.2 },
-           hovertemplate: '%{x|%Y-%m-%d}: h\u2009=\u2009%{y}%{customdata}' +
+           hovertemplate: '%{x|%Y-%m-%d}: h\u2009=\u2009' + yFmt + '%{customdata}' +
                           '<extra>' + name + '</extra>' };
 }
 
@@ -684,7 +685,7 @@ function renderTimeline(artist, plotEl) {
   if (_timelineView === 'hindex') {
     const wt = hindexTrace(tl.w, 'Weeks h-index',      wc, latestDate);
     const pt = hindexTrace(tl.p, 'Peak h-index',       pc, latestDate);
-    const it = hindexTrace(tl.i, 'Integrated h-index', ic, latestDate);
+    const it = hindexTrace(tl.i, 'Integrated h-index', ic, latestDate, true);
     if (wt) traces.push(wt);
     if (pt) traces.push(pt);
     if (it) traces.push(it);
