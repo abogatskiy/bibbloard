@@ -393,7 +393,9 @@ function updateGenreTable(period) {
     const y1 = periodYear > 0
       ? String(Math.max(periodYear, earliestYear))
       : (g.earliest ? g.earliest.slice(0,4) : '?');
-    const csLabel = g.cs_hi != null ? String(g.cs_hi) : '?';
+    const csLabel = g.cs_hi != null
+      ? (g.cs_lo != null && g.cs_lo < g.cs_hi ? `${g.cs_lo}\u2013${g.cs_hi}` : String(g.cs_hi))
+      : '?';
     const hhp_val = hasData ? (_unifiedMode && p?.u_hhp != null ? p.u_hhp : (p?.hhp ?? null)) : null;
     const hhi_val = hasData ? (_unifiedMode && p?.u_hhi != null ? p.u_hhi : (p?.hhi ?? null)) : null;
     return {genre: g.genre, key: g.key,
