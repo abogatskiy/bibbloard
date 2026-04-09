@@ -537,9 +537,9 @@ def build_chart_payload(weeks_ranking, peak_ranking, artist_songs, hhw, hhp,
     # These let the frontend draw a curve for any filtered/highlighted artist.
     w_top_set = {a for a, _, _ in weeks_ranking[:TOP_PLOT]}
     p_top_set = {a for a, _, _ in peak_ranking[:TOP_PLOT]}
-    weeks_extra = {a: curve_values(a, artist_songs, "weeks")[0]
+    weeks_extra = {a: dict(zip(("v","s","y"), curve_values(a, artist_songs, "weeks")))
                    for a, _, _ in table_w if a not in w_top_set}
-    peak_extra  = {a: curve_values(a, artist_songs, "peak")[0]
+    peak_extra  = {a: dict(zip(("v","s","y"), curve_values(a, artist_songs, "peak")))
                    for a, _, _ in table_p if a not in p_top_set}
 
     return {
