@@ -563,12 +563,19 @@ function createPlot(divId, curves, yLabel, chartSize) {
     const hover = g.entries.map(c =>
       '<b>' + c.artist + '</b>\u00a0h\u2011index\u00a0=\u00a0' + c.h
     ).join('<br>');
+    // Encode artist/h/color per entry as tab-delimited rows, one per line.
+    // Used by the integrated-plot popup handler to show marker hover info.
+    const meta = g.entries.map(c => {
+      const hDisp = Number.isInteger(c.h) ? String(c.h) : c.h.toFixed(1);
+      return c.artist + '\t' + hDisp + '\t' + c.color;
+    }).join('\n');
     traces.push({
       x: [g.x], y: [g.y],
       mode: 'markers',
       marker: {color: top.color, size: hl ? 16 : 12, symbol: 'circle',
                line: {color: col.bg, width: hl ? 3.5 : 2.5}},
       showlegend: false,
+      customdata: [meta],
       hovertemplate: hover + '<extra></extra>'
     });
   }
@@ -613,21 +620,33 @@ function createPlot(divId, curves, yLabel, chartSize) {
     const plotEl = document.getElementById(divId);
     plotEl.on('plotly_hover', evData => {
       const pt       = evData.points[0];
-      if (!pt.data.name) return;   // h-index marker trace — no popup
-      const cd       = pt.data.customdata?.[pt.pointIndex];
-      const songName = cd?.[0] ?? '';
-      const year     = cd?.[1] ?? '';
-      const artist   = pt.data.name;
-      const color    = pt.data.line?.color ?? '#888';
-      const score    = (+pt.y).toFixed(1);
-      const details  = songName ? _intSongPos[artist]?.[songName] : null;
-
-      let html = `<div style="font-weight:600;font-size:.82rem;color:${color}">${artist}</div>`;
-      if (songName)
-        html += `<div style="font-size:.75rem;color:var(--text);margin:.1rem 0 .15rem"><i>${songName}</i>` +
-                (year ? ` <span style="color:var(--muted)">(${year})</span>` : '') + `</div>`;
-      html += `<div style="font-size:.7rem;color:var(--muted);margin-bottom:${details ? 4 : 0}px">#${pt.x} &middot; peak-equiv&nbsp;wks:&nbsp;${score}</div>`;
-      if (details) html += songMiniSvg(details, color);
+      const isMarker = pt.data.mode === 'markers';
+      let html = '';
+      if (isMarker) {
+        // H-index marker: show artist(s) + h-index from encoded customdata
+        const meta = pt.data.customdata?.[pt.pointIndex] ?? '';
+        if (!meta) { popup.style.display = 'none'; return; }
+        meta.split('\n').forEach(row => {
+          const [a, h, c] = row.split('\t');
+          html += `<div><span style="font-weight:600;font-size:.82rem;color:${c}">${a}</span>` +
+                  ` <span style="font-size:.75rem;color:var(--muted)">h&#8209;index&nbsp;${h}</span></div>`;
+        });
+      } else {
+        // Song curve: show artist, song, score, mini-chart
+        const cd       = pt.data.customdata?.[pt.pointIndex];
+        const songName = cd?.[0] ?? '';
+        const year     = cd?.[1] ?? '';
+        const artist   = pt.data.name;
+        const color    = pt.data.line?.color ?? '#888';
+        const score    = (+pt.y).toFixed(1);
+        const details  = songName ? _intSongPos[artist]?.[songName] : null;
+        html = `<div style="font-weight:600;font-size:.82rem;color:${color}">${artist}</div>`;
+        if (songName)
+          html += `<div style="font-size:.75rem;color:var(--text);margin:.1rem 0 .15rem"><i>${songName}</i>` +
+                  (year ? ` <span style="color:var(--muted)">(${year})</span>` : '') + `</div>`;
+        html += `<div style="font-size:.7rem;color:var(--muted);margin-bottom:${details ? 4 : 0}px">#${pt.x} &middot; peak-equiv&nbsp;wks:&nbsp;${score}</div>`;
+        if (details) html += songMiniSvg(details, color);
+      }
 
       popup.innerHTML = html;
       popup.style.display = 'block';
@@ -666,25 +685,32 @@ function songMiniSvg(details, barColor) {
     return `<rect x="${x}" y="${padT + plotH - bh}" width="${barW}" height="${bh}" fill="${barColor}" opacity=".75"/>`;
   }).join('');
 
-  // Dashed horizontal line at the peak score level
-  const pkY   = padT + Math.round(plotH * (1 - peakScore));
-  const topY  = padT;  // y=1.0 → chart position #1
-  const dashLine = `<line x1="${padL}" y1="${pkY}" x2="${padL + plotW}" y2="${pkY}"` +
-    ` stroke="${muted}" stroke-width="1" stroke-dasharray="3,2"/>`;
+  // Solid line at top (y=1.0 = chart #1) as upper boundary
+  const topY = padT;
+  const topLine = `<line x1="${padL}" y1="${topY}" x2="${padL + plotW}" y2="${topY}"` +
+    ` stroke="${muted}" stroke-width="1"/>`;
 
-  // Right-side labels: #1 at top, #pk at the dashed line
+  // Dashed horizontal line at the peak score level
+  const pkY      = padT + Math.round(plotH * (1 - peakScore));
+  const dashLine = pk === 1 ? ''
+    : `<line x1="${padL}" y1="${pkY}" x2="${padL + plotW}" y2="${pkY}"` +
+      ` stroke="${muted}" stroke-width="1" stroke-dasharray="3,2"/>`;
+
+  // Right-side labels
   const lx = padL + plotW + 4;
-  const topLabel = `<text x="${lx}" y="${topY + 4}" font-size="8" fill="${muted}" font-family="Georgia,serif" dominant-baseline="middle">#1</text>`;
-  // Only draw #pk label if it won't overlap #1 label (need ≥ 10px gap)
-  const pkLabel = (pkY - topY >= 10)
-    ? `<text x="${lx}" y="${pkY}" font-size="8" fill="${fg}" font-family="Georgia,serif" dominant-baseline="middle">#${pk}</text>`
-    : '';
+  // #1 label: muted normally, fg (same as peak label) if song reached #1
+  const topLabelColor = pk === 1 ? fg : muted;
+  const topLabel = `<text x="${lx}" y="${topY}" font-size="8" fill="${topLabelColor}" font-family="Georgia,serif" dominant-baseline="middle">#1</text>`;
+  // #pk label: always show unless pk===1 (would duplicate #1); offset down if too close to #1
+  const pkLabelY = pk === 1 ? null : Math.max(pkY, topY + 11);
+  const pkLabel  = pkLabelY === null ? ''
+    : `<text x="${lx}" y="${pkLabelY}" font-size="8" fill="${fg}" font-family="Georgia,serif" dominant-baseline="middle">#${pk}</text>`;
 
   // Bottom: week count
   const wkLabel = `<text x="${padL + plotW / 2}" y="${H - 2}" text-anchor="middle" font-size="9" fill="${muted}" font-family="Georgia,serif">${n} wk${n===1?'':'s'}</text>`;
 
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" style="display:block">` +
-    bars + dashLine + topLabel + pkLabel + wkLabel + `</svg>`;
+    bars + topLine + dashLine + topLabel + pkLabel + wkLabel + `</svg>`;
 }
 
 function velocityColor(v) {

@@ -433,10 +433,18 @@ def compute_artist_timelines(artists: list, rows: list, metric: str,
                 score = max(cs - pk, 0) if isinstance(pk, int) and 0 < pk <= cs else 0
                 song_iscore[song] += score / cs if cs > 0 else 0
                 scores = sorted(song_iscore.values(), reverse=True)
-                h = 0
+                h_int = 0
                 for i, s in enumerate(scores, 1):
-                    if s >= i: h = i
+                    if s >= i: h_int = i
                     else:      break
+                # Interpolate real-valued h-fraction at the curve/diagonal crossing
+                if h_int > 0 and h_int < len(scores):
+                    f_h  = scores[h_int - 1]   # score at rank h_int
+                    f_h1 = scores[h_int]        # score at rank h_int+1
+                    delta = f_h1 - f_h          # ≤ 0 (sorted descending)
+                    h = (f_h - h_int * delta) / (1 - delta) if delta != -1 else float(h_int)
+                else:
+                    h = float(h_int)
             else:  # peak
                 cs    = chart_sizes.get(r["date"], 0) if chart_sizes else 0
                 pk    = r.get("peak", 0)
