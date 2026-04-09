@@ -394,11 +394,21 @@ def print_menu(cutoff: datetime.date):
             new_weeks = len(list(weeks_between(new_start, cutoff))) if new_start <= cutoff else 0
             # Gaps within existing data
             gap_dates = find_gap_dates(existing)
-            total = new_weeks + len(gap_dates)
+            # Missing history before earliest entry
+            hist_weeks = 0
+            earliest_str = CHART_EARLIEST.get(slug, "")
+            if earliest_str and earliest_date:
+                chart_start = datetime.date.fromisoformat(earliest_str)
+                if earliest_date > chart_start + datetime.timedelta(days=14):
+                    hist_end = earliest_date - datetime.timedelta(weeks=1)
+                    hist_weeks = len(list(weeks_between(chart_start, hist_end)))
+            total = new_weeks + len(gap_dates) + hist_weeks
             if total == 0:
                 status = f"up to date (last: {last})"
             else:
                 parts = []
+                if hist_weeks:
+                    parts.append(f"{hist_weeks} weeks of missing history (since {earliest_str})")
                 if new_weeks:
                     parts.append(f"{new_weeks} new weeks")
                 if gap_dates:
@@ -478,7 +488,35 @@ def fetch_chart(name: str, slug: str, filename: str,
         gap_dates   = find_gap_dates(existing)
         new_start   = last_date + datetime.timedelta(weeks=1)
         new_dates   = list(weeks_between(new_start, cutoff)) if new_start <= cutoff else []
-        week_dates  = sorted(set(gap_dates + new_dates))
+        # Missing history before the earliest entry in the CSV
+        hist_dates  = []
+        earliest_str = CHART_EARLIEST.get(slug)
+        if earliest_str and earliest_existing:
+            chart_start = datetime.date.fromisoformat(earliest_str)
+            if earliest_existing > chart_start + datetime.timedelta(days=14):
+                hist_end   = earliest_existing - datetime.timedelta(weeks=1)
+                hist_dates = list(weeks_between(chart_start, hist_end))
+        # Fast-check: probe 2 widely-spaced historical dates to see if the API
+        # actually serves historical data (some charts always return the current week).
+        if hist_dates and not dry_run:
+            probe = [hist_dates[0], hist_dates[len(hist_dates) // 2]]
+            sys.stdout.write(f"  {name}: probing {len(hist_dates)} historical weeks "
+                             f"({hist_dates[0]} → {hist_dates[-1]}) … ")
+            sys.stdout.flush()
+            returned = []
+            for d in probe:
+                try:
+                    returned.append(fetch_with_retry(slug, d).date)
+                except Exception:
+                    returned.append(None)
+            # If both probes returned the same already-known date, the API has no history
+            if len(set(returned)) == 1 and returned[0] in existing_dates:
+                print(f"redirects to '{returned[0]}' — no historical data available, skipping.")
+                hist_dates = []
+            else:
+                print("ok, historical data available.")
+
+        week_dates  = sorted(set(hist_dates + gap_dates + new_dates))
 
     if not week_dates:
         print(f"  {name}: already up to date (last: {last_date})")
@@ -511,11 +549,13 @@ def fetch_chart(name: str, slug: str, filename: str,
                 added += 1
                 total_entries += n
                 delay_s = f"  delay={delay:.2f}s" if delay > 0 else ""
-                progress.update(1, f"{actual}  +{n} entries{delay_s}")
+                suffix = f" (got {actual})" if actual != week_date.isoformat() else ""
+                progress.update(1, f"{week_date}{suffix}  +{n} entries{delay_s}")
                 delay = max(0.0, delay * DELAY_RECOVER)
             else:
+                suffix = f" → {actual}" if actual != week_date.isoformat() else ""
                 skipped += 1
-                progress.update(1, f"{actual}  (already exists, skipped)")
+                progress.update(1, f"{week_date}{suffix}  (skipped)")
 
         except KeyboardInterrupt:
             progress.interrupt("\nInterrupted.")
