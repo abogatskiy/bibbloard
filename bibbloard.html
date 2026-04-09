@@ -209,7 +209,6 @@ footer strong{color:var(--text)}
       <table><thead><tr>
         <th style="width:2rem" class="tr">#</th>
         <th>Billboard chart</th>
-        <th style="width:5.5rem" class="tr">Coverage</th>
         <th style="width:5rem" class="tr">Weeks H-H</th>
         <th style="width:5rem" class="tr">Peak H-H</th>
       </tr></thead><tbody id="genre-tbody"></tbody></table>
@@ -378,12 +377,11 @@ function updateGenreTable(period) {
     const p = g.periods[period];
     const earliestYear = g.earliest ? parseInt(g.earliest) : 0;
     const latestYear   = g.latest   ? parseInt(g.latest)   : 0;
-    const sinceYear    = period === 'all' ? earliestYear : Math.max(periodYear, earliestYear);
     const hasData      = !!p && latestYear >= periodYear;
-    const coverage     = hasData ? `${sinceYear}\u2013${latestYear}` : '\u2014';
     return {genre: g.genre, key: g.key,
             hhw: hasData ? p.hhw : null, hhp: hasData ? p.hhp : null,
-            coverage};
+            y1: g.earliest ? g.earliest.slice(0,4) : '?',
+            y2: g.latest   ? g.latest.slice(0,4)   : '?'};
   }).sort((a, b) => (b.hhw ?? -1) - (a.hhw ?? -1) || (b.hhp ?? -1) - (a.hhp ?? -1));
 
   const tbody = document.getElementById('genre-tbody');
@@ -394,8 +392,8 @@ function updateGenreTable(period) {
     const hhp = g.hhp != null ? `<strong>${g.hhp}</strong>` : '<span class="dim">\u2014</span>';
     tbody.insertAdjacentHTML('beforeend',
       `<tr${active} onclick="selectChart('${g.key}')" style="cursor:pointer" title="View ${g.genre} chart">` +
-      `<td class="tr dim">${i+1}</td><td>${g.genre}</td>` +
-      `<td class="tr dim" style="font-size:.8rem;letter-spacing:.01em;white-space:nowrap">${g.coverage}</td>` +
+      `<td class="tr dim">${i+1}</td>` +
+      `<td>${g.genre}<span class="dim" style="font-size:.8rem"> (${g.y1}\u2013${g.y2})</span></td>` +
       `<td class="tr">${hhw}</td><td class="tr">${hhp}</td></tr>`);
   });
 }
@@ -557,43 +555,35 @@ function createPlot(divId, curves, yLabel, chartSize) {
     }
   }
 
-  // Labels inside the plot along the left edge, with a unified background shape
+  // Labels on right side, anchored at each artist's h-index y-value.
+  // h-index values are naturally well-distributed (that's their purpose),
+  // and the colored dot on the diagonal acts as the visual anchor per label.
   const labelPts = curves
-    .map(c => ({y: c.values[0] ?? 0, yl: c.values[0] ?? 0, artist: c.artist, color: c.color,
+    .map(c => ({y: c.h, artist: c.artist, color: c.color,
                 hl: highlighted.has(c.artist)}))
     .sort((a, b) => b.y - a.y);
-  // Compute minGap from actual pixel height so labels stay near their true y-values
-  const plotH = document.getElementById(divId).offsetHeight || 400;
-  const plotAreaH = Math.max(plotH - 73, 80);   // subtract top(15)+bottom(58) margin
-  const minGap = maxY * 15 / plotAreaH;          // ~15px per label in data units
-  spreadLabels(labelPts, minGap, maxY * 0.02, maxY * 0.98);
+  const plotH     = document.getElementById(divId).offsetHeight || 400;
+  const plotAreaH = Math.max(plotH - 73, 80);
+  const minGap    = maxY * 15 / plotAreaH;
+  spreadLabels(labelPts, minGap, maxY * 0.01, maxY * 0.99);
 
-  // Compute the label strip width as a fraction of the plot area
-  const lMargin = 42, rMargin = 15;
-  const containerW  = document.getElementById(divId).offsetWidth || 500;
-  const plotAreaW   = Math.max(containerW - lMargin - rMargin, 150);
-  const maxLabelPx  = Math.max(...curves.map(c =>
-    textWidth(c.artist, (highlighted.has(c.artist) ? '13' : '11') + 'px Georgia, serif'))) + 10;
-  const labelFrac   = Math.min(maxLabelPx / plotAreaW, 0.45);
+  // Right margin = longest label text + small padding
+  const maxLabelPx = Math.max(...curves.map(c =>
+    textWidth(c.artist, (highlighted.has(c.artist) ? '13' : '11') + 'px Georgia, serif'))) + 8;
+  const lMargin = 42;
+  const rMargin = Math.ceil(maxLabelPx) + 10;
 
   for (const lp of labelPts) {
     annotations.push({
-      x: 0.005, xref: 'paper', xanchor: 'left',
+      x: 1.01, xref: 'paper', xanchor: 'left',
       y: lp.yl, yref: 'y',
       text: lp.hl ? '<b>' + lp.artist + '</b>' : lp.artist,
-      showarrow: false,
-      yanchor: 'middle',
+      showarrow: false, yanchor: 'middle',
       font: {color: lp.color, size: lp.hl ? 13 : 11, family: 'Georgia, serif'}
     });
   }
 
-  // Single unified background rect behind all labels
-  const shapes = [{
-    type: 'rect', xref: 'paper', yref: 'paper',
-    x0: 0, x1: labelFrac, y0: 0, y1: 1,
-    fillcolor: col.bg, opacity: 1, line: {width: 0},
-    layer: 'above traces'
-  }];
+  const shapes = [];  // no background needed
 
   Plotly.newPlot(divId, traces, {
     xaxis: {
