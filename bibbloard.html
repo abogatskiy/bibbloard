@@ -93,6 +93,7 @@ h1{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:3rem;le
 
 /* ── Plots ────────────────────────────────────────────────────────────────── */
 .plots{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:1.5rem;margin-bottom:2rem}
+.plot-card-full{grid-column:1/-1;max-width:900px;margin-inline:auto;width:100%}
 .plot-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:.75rem .75rem .5rem}
 .plot-card h2{font-size:.9rem;padding:0 .25rem .1rem;margin-bottom:.08rem;color:var(--text)}
 .plot-card .desc{font-size:.75rem;color:var(--muted);padding:0 .25rem .4rem}
@@ -278,7 +279,7 @@ footer strong{color:var(--text)}
 
   <!-- Plots -->
   <div class="plots">
-    <div class="plot-card">
+    <div class="plot-card plot-card-full">
       <h2>Integrated H-Index &mdash; Top <span class="n-label">10</span></h2>
       <div class="desc"><em>h</em> songs each with &ge;&thinsp;<em>h</em> peak-equivalent weeks on chart &middot; hover for details</div>
       <div id="integrated-plot" class="plot-box"></div>
@@ -304,11 +305,13 @@ footer strong{color:var(--text)}
       </div>
       <table><thead><tr id="combined-thead-row">
         <th style="width:2rem" class="tr">#</th>
-        <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="weeksH" title="Weeks h-index">Wks H</th>
-        <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="peakH" title="Peak h-index">Pk H</th>
         <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="intH" title="Integrated h-index">Int H</th>
+        <th style="width:3.2rem" class="tr sortable" data-table="combined" data-col="iYoY" title="Year-over-year change in integrated h-index">YoY</th>
+        <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="weeksH" title="Weeks h-index">Wks H</th>
+        <th style="width:3.2rem" class="tr sortable" data-table="combined" data-col="wYoY" title="Year-over-year change in weeks h-index">YoY</th>
+        <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="peakH" title="Peak h-index">Pk H</th>
+        <th style="width:3.2rem" class="tr sortable" data-table="combined" data-col="pYoY" title="Year-over-year change in peak h-index">YoY</th>
         <th style="width:3.2rem" class="tr sortable" data-table="combined" data-col="n">Songs</th>
-        <th style="width:3.5rem" class="tr sortable" data-table="combined" data-col="velocity" title="Year-over-year change in weeks h-index">YoY</th>
         <th>Artist</th>
       </tr></thead><tbody id="combined-tbody"></tbody></table>
     </div>
@@ -743,8 +746,8 @@ function refreshAllTimelines() {
 }
 
 // ── Sort helpers ──────────────────────────────────────────────────────────────
-// Combined row format: [rank(0), artist(1), weeksH(2), peakH(3), intH(4), n(5), velocity(6)]
-const COL_IDX = { artist: 1, weeksH: 2, peakH: 3, intH: 4, n: 5, velocity: 6 };
+// Combined row format: [rank(0), artist(1), intH(2), iYoY(3), weeksH(4), wYoY(5), peakH(6), pYoY(7), n(8)]
+const COL_IDX = { artist: 1, intH: 2, iYoY: 3, weeksH: 4, wYoY: 5, peakH: 6, pYoY: 7, n: 8 };
 
 function sortedRows(rows, state) {
   const idx = COL_IDX[state.col] ?? 0;
@@ -772,21 +775,24 @@ function fillTableRows(id, rows, tableKey) {
   const tbody = document.getElementById(id);
   tbody.innerHTML = '';
   rows.forEach((row, i) => {
-    const [, artist, weeksH, peakH, intH, n, velocity] = row;
-    const vel = velocity ?? 0;
-    const velColor = velocityColor(vel);
-    const velHtml  = vel > 0
-      ? `<td class="tr vel-pos" style="color:${velColor}">+${vel}</td>`
-      : `<td class="tr vel-zero">—</td>`;
+    const [, artist, intH, iYoY, weeksH, wYoY, peakH, pYoY, n] = row;
+    function yoyHtml(vel, frac) {
+      if ((vel ?? 0) <= 0) return `<td class="tr vel-zero">—</td>`;
+      const c = velocityColor(vel);
+      const s = frac ? (+vel).toFixed(1) : vel;
+      return `<td class="tr vel-pos" style="color:${c}">+${s}</td>`;
+    }
     const isExpanded = _expandedArtists.has(artist + '|' + tableKey);
     tbody.insertAdjacentHTML('beforeend',
       `<tr data-artist="${escHtml(artist)}" data-table="${tableKey}">` +
       `<td class="tr dim">${i + 1}</td>` +
-      `<td class="tr bld">${weeksH}</td>` +
-      `<td class="tr bld">${peakH}</td>` +
       `<td class="tr bld">${(+intH).toFixed(1)}</td>` +
+      yoyHtml(iYoY, true) +
+      `<td class="tr bld">${weeksH}</td>` +
+      yoyHtml(wYoY, false) +
+      `<td class="tr bld">${peakH}</td>` +
+      yoyHtml(pYoY, false) +
       `<td class="tr dim">${n}</td>` +
-      velHtml +
       `<td><span class="artist-link" data-artist="${escHtml(artist)}" data-table="${tableKey}">${escHtml(artist)}</span></td>` +
       `</tr>`);
     if (isExpanded) {
@@ -796,7 +802,7 @@ function fillTableRows(id, rows, tableKey) {
       const vlAct = _timelineView === 'velocity' ? ' active' : '';
       const sigDisp = _timelineView === 'velocity' ? 'flex' : 'none';
       tbody.insertAdjacentHTML('beforeend',
-        `<tr class="timeline-row"><td colspan="7">` +
+        `<tr class="timeline-row"><td colspan="9">` +
         `<div class="timeline-inner">` +
         `<div class="tl-controls">` +
         `<button class="tl-view-btn${hiAct}" data-view="hindex">H-Index</button>` +
@@ -877,8 +883,12 @@ function buildCombinedTable() {
   return _currentData.weeksTable.map(r => {
     const peakRow = peakMap.get(r[1]);
     const intRow  = intMap.get(r[1]);
-    // [rank, artist, weeksH, peakH, intH, n, velocity]
-    return [r[0], r[1], r[2], peakRow?.[2] ?? 0, intRow?.[2] ?? 0, r[3], r[4]];
+    // [rank, artist, intH, iYoY, weeksH, wYoY, peakH, pYoY, n]
+    return [r[0], r[1],
+            intRow?.[2] ?? 0, intRow?.[4] ?? 0,
+            r[2], r[4],
+            peakRow?.[2] ?? 0, peakRow?.[4] ?? 0,
+            r[3]];
   });
 }
 
@@ -967,8 +977,8 @@ document.querySelectorAll('thead th.sortable').forEach(th => {
     } else {
       state.col = col;
       state.asc = (col === 'artist' || col === 'genre');
-      if (col === 'weeksH' || col === 'peakH' || col === 'intH' || col === 'n' || col === 'velocity'
-          || col === 'hhw' || col === 'hhp' || col === 'hhi') state.asc = false;
+      if (['weeksH','peakH','intH','wYoY','pYoY','iYoY','n','velocity',
+           'hhw','hhp','hhi'].includes(col)) state.asc = false;
     }
     if (tableKey === 'genre') {
       updateGenreTable(document.getElementById('period-select').value);
