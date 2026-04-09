@@ -383,6 +383,7 @@ function updateGenreTable(period) {
             hhw: hasData ? p.hhw : null, hhp: hasData ? p.hhp : null,
             hhi: hasData ? (p.hhi ?? null) : null,
             y1, y2: g.latest ? g.latest.slice(0,4) : '?'};
+  });
   const gs = _sortState.genre;
   rows.sort((a, b) => {
     if (gs.col === 'genre') {
