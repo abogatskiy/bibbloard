@@ -546,12 +546,16 @@ function createPlot(divId, curves, yLabel, chartSize) {
     });
   }
 
-  // H-index markers on diagonal — one trace per artist
+  // H-index markers — placed on the curve at x=h (y = actual score at rank h).
+  // Putting them on the diagonal (y=h) causes overlapping markers for artists
+  // that share the same h-index, making all but the last one invisible.
+  // Placing on the curve gives each artist a distinct y position.
   for (const c of curves) {
     if (c.h > 0) {
-      const hl = highlighted.has(c.artist);
+      const hl  = highlighted.has(c.artist);
+      const yMk = c.values[c.h - 1] ?? c.h;  // score of the h-th ranked song
       traces.push({
-        x: [c.h], y: [c.h],
+        x: [c.h], y: [yMk],
         mode: 'markers',
         marker: {color: c.color, size: hl ? 16 : 12, symbol: 'circle',
                  line: {color: col.bg, width: hl ? 3.5 : 2.5}},
