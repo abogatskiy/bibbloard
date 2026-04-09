@@ -862,9 +862,12 @@ def main():
                                         tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
                                         chart_sizes=gchart_sizes),
                     DATA_DIR / fname)
+            cs_vals  = list(gchart_sizes.values())
+            cs_lo, cs_hi = (min(cs_vals), max(cs_vals)) if cs_vals else (100, 100)
             genre_summary.append({
                 "genre": genre_name, "key": key, "periods": genre_periods,
                 "earliest": genre_min, "latest": genre_max,
+                "cs_lo": cs_lo, "cs_hi": cs_hi,
             })
 
     except KeyboardInterrupt:
@@ -875,9 +878,12 @@ def main():
     progress.finish("All chart files written")
 
     # ── Genre summary ─────────────────────────────────────────────────────────
+    h100_cs = list(hot100_chart_sizes.values())
+    h100_lo, h100_hi = (min(h100_cs), max(h100_cs)) if h100_cs else (100, 100)
     genre_summary.append({
         "genre": "Hot 100", "key": "hot100", "periods": hot100_periods,
         "earliest": hot100_min, "latest": hot100_max,
+        "cs_lo": h100_lo, "cs_hi": h100_hi,
     })
     genre_summary.sort(key=lambda g: (-g["periods"]["all"]["hhw"], -g["periods"]["all"]["hhp"]))
 
