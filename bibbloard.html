@@ -203,6 +203,17 @@ footer strong{color:var(--text)}
 
 
   <!-- Genre h-h-index ranking -->
+  <div class="selector-bar" style="margin-bottom:.75rem">
+    <label for="period-select">Since:</label>
+    <select id="period-select">
+      <option value="all">All time</option>
+      <option value="2020">2020</option>
+      <option value="2015">2015</option>
+      <option value="2010">2010</option>
+      <option value="2005">2005</option>
+      <option value="2000">2000</option>
+    </select>
+  </div>
   <div class="section-title">Genre H-H-Index Ranking</div>
   <div class="tables" style="margin-bottom:2rem">
     <div class="tbl-card">
@@ -241,31 +252,23 @@ footer strong{color:var(--text)}
     </div>
   </div>
 
-  <!-- Chart + period selectors -->
+  <!-- Chart selector -->
   <div class="selector-bar">
     <label for="chart-select">View chart:</label>
     <select id="chart-select"></select>
-    <span class="sep">&middot;</span>
-    <label for="period-select">Since:</label>
-    <select id="period-select">
-      <option value="all">All time</option>
-      <option value="2020">2020</option>
-      <option value="2015">2015</option>
-      <option value="2010">2010</option>
-      <option value="2005">2005</option>
-      <option value="2000">2000</option>
-    </select>
-    <span class="sep">&middot;</span>
+    <span id="loading">Loading&hellip;</span>
+  </div>
+
+  <h2 id="chart-heading" style="font-size:1.15rem;font-weight:600;margin-bottom:.6rem;color:var(--text)"></h2>
+
+  <div class="selector-bar" style="margin-bottom:1rem">
     <label for="n-select">Artists in plot:</label>
     <select id="n-select">
       <option value="10">Top 10</option>
       <option value="20">Top 20</option>
       <option value="30">Top 30</option>
     </select>
-    <span id="loading">Loading&hellip;</span>
   </div>
-
-  <h2 id="chart-heading" style="font-size:1.15rem;font-weight:600;margin-bottom:1.2rem;color:var(--text)"></h2>
 
   <!-- Plots -->
   <div class="plots">
@@ -276,38 +279,26 @@ footer strong{color:var(--text)}
     </div>
     <div class="plot-card">
       <h2>Peak H-Index &mdash; Top <span class="n-label">10</span></h2>
-      <div class="desc" id="peak-desc"><em>h</em> songs have chart score &ge;&thinsp;<em>h</em> &middot; score&nbsp;=&nbsp;100&thinsp;&minus;&thinsp;peak position &middot; hover for details</div>
+      <div class="desc" id="peak-desc"><em>h</em> songs each at least <em>h</em> spots from the top &middot; hover for details</div>
       <div id="peak-plot" class="plot-box"></div>
     </div>
   </div>
 
-  <!-- Artist ranking tables -->
+  <!-- Artist ranking table -->
   <div class="tables">
-    <div class="tbl-card">
+    <div class="tbl-card" style="grid-column:1/-1">
       <div class="tbl-header">
-        <h2>Weeks H-Index &mdash; Top 50</h2>
-        <input class="tbl-filter" id="weeks-filter" type="search" placeholder="Filter artists…" autocomplete="off" data-table="weeks">
+        <h2>Artist Rankings &mdash; Top 50</h2>
+        <input class="tbl-filter" id="combined-filter" type="search" placeholder="Filter artists…" autocomplete="off" data-table="combined">
       </div>
-      <table><thead><tr id="weeks-thead-row">
-        <th style="width:2rem" class="tr sortable" data-table="weeks" data-col="rank">#</th>
-        <th style="width:2rem" class="tr sortable" data-table="weeks" data-col="h">H</th>
-        <th style="width:3.2rem" class="tr sortable" data-table="weeks" data-col="n">Songs</th>
-        <th style="width:3.5rem" class="tr sortable" data-table="weeks" data-col="velocity" title="Year-over-year change in h-index">YoY</th>
+      <table><thead><tr id="combined-thead-row">
+        <th style="width:2rem" class="tr">#</th>
+        <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="weeksH" title="Weeks h-index">Wks H</th>
+        <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="peakH" title="Peak h-index">Pk H</th>
+        <th style="width:3.2rem" class="tr sortable" data-table="combined" data-col="n">Songs</th>
+        <th style="width:3.5rem" class="tr sortable" data-table="combined" data-col="velocity" title="Year-over-year change in weeks h-index">YoY</th>
         <th>Artist</th>
-      </tr></thead><tbody id="weeks-tbody"></tbody></table>
-    </div>
-    <div class="tbl-card">
-      <div class="tbl-header">
-        <h2>Peak H-Index &mdash; Top 50</h2>
-        <input class="tbl-filter" id="peak-filter" type="search" placeholder="Filter artists…" autocomplete="off" data-table="peak">
-      </div>
-      <table><thead><tr id="peak-thead-row">
-        <th style="width:2rem" class="tr sortable" data-table="peak" data-col="rank">#</th>
-        <th style="width:2rem" class="tr sortable" data-table="peak" data-col="h">H</th>
-        <th style="width:3.2rem" class="tr sortable" data-table="peak" data-col="n">Songs</th>
-        <th style="width:3.5rem" class="tr sortable" data-table="peak" data-col="velocity" title="Year-over-year change in h-index">YoY</th>
-        <th>Artist</th>
-      </tr></thead><tbody id="peak-tbody"></tbody></table>
+      </tr></thead><tbody id="combined-tbody"></tbody></table>
     </div>
   </div>
 
@@ -316,11 +307,6 @@ footer strong{color:var(--text)}
     <button id="load-more-btn" onclick="loadMore()">Load more</button>
   </div>
 
-  <footer>
-    <strong>Weeks h-index:</strong> sort songs by weeks-on-chart descending; h&nbsp;= largest rank where weeks&nbsp;&ge;&nbsp;rank. &nbsp;&middot;&nbsp;
-    <strong>Peak h-index:</strong> sort songs by chart score (chart&nbsp;size&nbsp;&minus;&nbsp;peak&nbsp;position) descending; h&nbsp;= largest rank where score&nbsp;&ge;&nbsp;rank. &nbsp;&middot;&nbsp;
-    Each (artist,&nbsp;song) pair is deduplicated; weeks = chart appearances in window, peak = best position in window.
-  </footer>
 </div>
 
 <script>
@@ -378,10 +364,12 @@ function updateGenreTable(period) {
     const earliestYear = g.earliest ? parseInt(g.earliest) : 0;
     const latestYear   = g.latest   ? parseInt(g.latest)   : 0;
     const hasData      = !!p && latestYear >= periodYear;
+    const y1 = periodYear > 0
+      ? String(Math.max(periodYear, earliestYear))
+      : (g.earliest ? g.earliest.slice(0,4) : '?');
     return {genre: g.genre, key: g.key,
             hhw: hasData ? p.hhw : null, hhp: hasData ? p.hhp : null,
-            y1: g.earliest ? g.earliest.slice(0,4) : '?',
-            y2: g.latest   ? g.latest.slice(0,4)   : '?'};
+            y1, y2: g.latest ? g.latest.slice(0,4) : '?'};
   }).sort((a, b) => (b.hhw ?? -1) - (a.hhw ?? -1) || (b.hhp ?? -1) - (a.hhp ?? -1));
 
   const tbody = document.getElementById('genre-tbody');
@@ -412,45 +400,13 @@ const COLORS = [
   '#bcbd22','#dbdb8d','#17becf','#9edae5','#393b79',
 ];
 const _expandedArtists = new Set();
-const _filterQuery = { weeks: '', peak: '' };
+const _filterQuery = { combined: '' };
 const _sortState = {
-  weeks: { col: 'rank', asc: true },
-  peak:  { col: 'rank', asc: true }
+  combined: { col: 'weeksH', asc: false }
 };
 let _timelineView  = 'hindex';   // 'hindex' | 'velocity'
 let _timelineSigma = 26;         // weeks
 
-// ── Label spreading (iterative two-pass, minimises displacement) ──────────────
-function spreadLabels(pts, minGap, yMin, yMax) {
-  const n = pts.length;
-  if (n === 0) return;
-  // Start at actual positions, clamped to valid range
-  pts.forEach(p => p.yl = Math.max(yMin, Math.min(yMax, p.y)));
-  for (let iter = 0; iter < 30; iter++) {
-    let moved = false;
-    // Top-down: push down if too close
-    for (let i = 1; i < n; i++) {
-      const need = pts[i-1].yl - minGap;
-      if (pts[i].yl > need) { pts[i].yl = need; moved = true; }
-    }
-    if (pts[n-1].yl < yMin) { pts[n-1].yl = yMin; moved = true; }
-    // Bottom-up: push up if too close
-    for (let i = n-2; i >= 0; i--) {
-      const need = pts[i+1].yl + minGap;
-      if (pts[i].yl < need) { pts[i].yl = need; moved = true; }
-    }
-    if (pts[0].yl > yMax) { pts[0].yl = yMax; moved = true; }
-    if (!moved) break;
-  }
-}
-
-// ── Measure text width via canvas ────────────────────────────────────────────
-const _textCanvas = document.createElement('canvas');
-function textWidth(str, font) {
-  const ctx = _textCanvas.getContext('2d');
-  ctx.font = font;
-  return ctx.measureText(str).width;
-}
 
 // ── Helpers for expanded-artist highlights ────────────────────────────────────
 function getExpandedArtistNames() {
@@ -481,7 +437,6 @@ function createPlot(divId, curves, yLabel, chartSize) {
 
   const col         = plotColors();
   const traces      = [];
-  const annotations = [];
   const highlighted = getExpandedArtistNames();
 
   // Inject highlighted artists that aren't already in the visible top-N curves
@@ -537,9 +492,10 @@ function createPlot(divId, curves, yLabel, chartSize) {
       : '';
     traces.push({
       x, y: c.values,
+      name: c.artist,
       mode: 'lines',
       line: {color: c.color, width: hl ? 4.5 : 2.2},
-      showlegend: false,
+      showlegend: true,
       customdata,
       hovertemplate: '<b>' + c.artist + '</b>' + songLine +
                      '<br>#%{x} \u00b7 ' + yLabel + ': %{y}<extra></extra>'
@@ -561,35 +517,8 @@ function createPlot(divId, curves, yLabel, chartSize) {
     }
   }
 
-  // Labels on right side, anchored at each artist's h-index y-value.
-  // h-index values are naturally well-distributed (that's their purpose),
-  // and the colored dot on the diagonal acts as the visual anchor per label.
-  const labelPts = curves
-    .map(c => ({y: c.h, artist: c.artist, color: c.color,
-                hl: highlighted.has(c.artist)}))
-    .sort((a, b) => b.y - a.y);
-  const plotH     = document.getElementById(divId).offsetHeight || 400;
-  const plotAreaH = Math.max(plotH - 73, 80);
-  const minGap    = maxY * 15 / plotAreaH;
-  spreadLabels(labelPts, minGap, maxY * 0.01, maxY * 0.99);
-
-  // Right margin = longest label text + small padding
-  const maxLabelPx = Math.max(...curves.map(c =>
-    textWidth(c.artist, (highlighted.has(c.artist) ? '13' : '11') + 'px Georgia, serif'))) + 8;
   const lMargin = 42;
-  const rMargin = Math.ceil(maxLabelPx) + 10;
-
-  for (const lp of labelPts) {
-    annotations.push({
-      x: 1.01, xref: 'paper', xanchor: 'left',
-      y: lp.yl, yref: 'y',
-      text: lp.hl ? '<b>' + lp.artist + '</b>' : lp.artist,
-      showarrow: false, yanchor: 'middle',
-      font: {color: lp.color, size: lp.hl ? 13 : 11, family: 'Georgia, serif'}
-    });
-  }
-
-  const shapes = [];  // no background needed
+  const rMargin = 10;
 
   Plotly.newPlot(divId, traces, {
     xaxis: {
@@ -606,12 +535,22 @@ function createPlot(divId, curves, yLabel, chartSize) {
       zeroline: false, showline: true, linecolor: col.line,
       tickfont: {color: col.font}, titlefont: {color: col.font},
     },
-    annotations, shapes,
+    showlegend: true,
+    legend: {x: 1, xanchor: 'right', y: 1, yanchor: 'top',
+             bgcolor: 'rgba(0,0,0,0)', borderwidth: 0,
+             font: {size: 10, family: 'Georgia, serif', color: col.font}},
     hovermode: 'closest',
     plot_bgcolor: col.bg, paper_bgcolor: col.bg,
     margin: {t: 15, b: 58, l: lMargin, r: rMargin},
     font: {family: 'Georgia, serif', size: 11, color: col.font}
   }, {responsive: true, displayModeBar: false});
+
+  document.querySelectorAll(`#${divId} .legend .traces`).forEach(item => {
+    const name = item.querySelector('.legendtext')?.textContent?.trim();
+    if (!name) return;
+    item.addEventListener('mouseenter', () => highlightArtistInPlots(name, true));
+    item.addEventListener('mouseleave', () => highlightArtistInPlots(name, false));
+  });
 }
 
 // ── Velocity colour ───────────────────────────────────────────────────────────
@@ -766,8 +705,8 @@ function refreshAllTimelines() {
 }
 
 // ── Sort helpers ──────────────────────────────────────────────────────────────
-// Row format: [rank(0), artist(1), h(2), n(3), velocity(4)]
-const COL_IDX = { rank: 0, artist: 1, h: 2, n: 3, velocity: 4 };
+// Combined row format: [rank(0), artist(1), weeksH(2), peakH(3), n(4), velocity(5)]
+const COL_IDX = { artist: 1, weeksH: 2, peakH: 3, n: 4, velocity: 5 };
 
 function sortedRows(rows, state) {
   const idx = COL_IDX[state.col] ?? 0;
@@ -794,8 +733,8 @@ function updateSortHeaders(tableKey) {
 function fillTableRows(id, rows, tableKey) {
   const tbody = document.getElementById(id);
   tbody.innerHTML = '';
-  for (const row of rows) {
-    const [rank, artist, h, n, velocity] = row;
+  rows.forEach((row, i) => {
+    const [, artist, weeksH, peakH, n, velocity] = row;
     const vel = velocity ?? 0;
     const velColor = velocityColor(vel);
     const velHtml  = vel > 0
@@ -804,8 +743,9 @@ function fillTableRows(id, rows, tableKey) {
     const isExpanded = _expandedArtists.has(artist + '|' + tableKey);
     tbody.insertAdjacentHTML('beforeend',
       `<tr data-artist="${escHtml(artist)}" data-table="${tableKey}">` +
-      `<td class="tr dim">${rank}</td>` +
-      `<td class="tr bld">${h}</td>` +
+      `<td class="tr dim">${i + 1}</td>` +
+      `<td class="tr bld">${weeksH}</td>` +
+      `<td class="tr bld">${peakH}</td>` +
       `<td class="tr dim">${n}</td>` +
       velHtml +
       `<td><span class="artist-link" data-artist="${escHtml(artist)}" data-table="${tableKey}">${escHtml(artist)}</span></td>` +
@@ -817,7 +757,7 @@ function fillTableRows(id, rows, tableKey) {
       const vlAct = _timelineView === 'velocity' ? ' active' : '';
       const sigDisp = _timelineView === 'velocity' ? 'flex' : 'none';
       tbody.insertAdjacentHTML('beforeend',
-        `<tr class="timeline-row"><td colspan="5">` +
+        `<tr class="timeline-row"><td colspan="6">` +
         `<div class="timeline-inner">` +
         `<div class="tl-controls">` +
         `<button class="tl-view-btn${hiAct}" data-view="hindex">H-Index</button>` +
@@ -832,7 +772,7 @@ function fillTableRows(id, rows, tableKey) {
       const plotEl = document.getElementById(uid);
       if (plotEl) renderTimeline(artist, plotEl);
     }
-  }
+  });
 }
 
 function escHtml(str) {
@@ -891,20 +831,25 @@ function filterRows(rows, query) {
   return rows.filter(r => r[1].toLowerCase().includes(q));
 }
 
+function buildCombinedTable() {
+  if (!_currentData) return [];
+  const peakMap = new Map(_currentData.peakTable.map(r => [r[1], r]));
+  return _currentData.weeksTable.map(r => {
+    const peakRow = peakMap.get(r[1]);
+    // [rank, artist, weeksH, peakH, n, velocity]
+    return [r[0], r[1], r[2], peakRow?.[2] ?? 0, r[3], r[4]];
+  });
+}
+
 function renderTables() {
-  const wq = _filterQuery.weeks;
-  const pq = _filterQuery.peak;
-  // When filtering, search the full table; otherwise respect _tableOffset
-  const wAll = wq ? _currentData.weeksTable : _currentData.weeksTable.slice(0, _tableOffset);
-  const pAll = pq ? _currentData.peakTable  : _currentData.peakTable.slice(0,  _tableOffset);
-  fillTableRows('weeks-tbody', sortedRows(filterRows(wAll, wq), _sortState.weeks), 'weeks');
-  fillTableRows('peak-tbody',  sortedRows(filterRows(pAll, pq), _sortState.peak),  'peak');
-  updateSortHeaders('weeks');
-  updateSortHeaders('peak');
-  // Hide "load more" while any filter is active
-  const total = Math.max(_currentData.weeksTable.length, _currentData.peakTable.length);
+  const q = _filterQuery.combined;
+  const all = buildCombinedTable();
+  const rows = q ? all : all.slice(0, _tableOffset);
+  fillTableRows('combined-tbody', sortedRows(filterRows(rows, q), _sortState.combined), 'combined');
+  updateSortHeaders('combined');
+  const total = all.length;
   const btn = document.getElementById('load-more-btn');
-  if (wq || pq || _tableOffset >= total) {
+  if (q || _tableOffset >= total) {
     btn.style.display = 'none';
   } else {
     btn.style.display = '';
@@ -931,9 +876,8 @@ function renderChart(data) {
   _currentData  = data;
   _tableOffset  = TABLE_STEP;
   _expandedArtists.clear();
-  _filterQuery.weeks = ''; _filterQuery.peak = '';
-  document.getElementById('weeks-filter').value = '';
-  document.getElementById('peak-filter').value  = '';
+  _filterQuery.combined = '';
+  document.getElementById('combined-filter').value = '';
   const chartSel  = document.getElementById('chart-select');
   const periodSel = document.getElementById('period-select');
   const chartLabel = chartSel.options[chartSel.selectedIndex]?.text || '';
@@ -941,8 +885,7 @@ function renderChart(data) {
   document.getElementById('chart-heading').textContent = chartLabel + ' · ' + periodLabel;
   const cs = data.chart_size || 100;
   document.getElementById('peak-desc').innerHTML =
-    '<em>h</em> songs have chart score &ge;&thinsp;<em>h</em> &middot; score&nbsp;=&nbsp;' +
-    cs + '&thinsp;&minus;&thinsp;peak position &middot; hover for details';
+    '<em>h</em> songs each at least <em>h</em> spots from the top &middot; hover for details';
   redrawPlots();
   renderTables();
   updateGenreTable(document.getElementById('period-select').value);
@@ -980,8 +923,8 @@ document.querySelectorAll('thead th.sortable').forEach(th => {
       state.asc = !state.asc;
     } else {
       state.col = col;
-      state.asc = col === 'rank';   // rank defaults asc; metrics default desc
-      if (col === 'h' || col === 'n' || col === 'velocity') state.asc = false;
+      state.asc = col === 'artist';
+      if (col === 'weeksH' || col === 'peakH' || col === 'n' || col === 'velocity') state.asc = false;
     }
     if (_currentData) renderTables();
   });
