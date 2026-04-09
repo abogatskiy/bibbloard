@@ -989,6 +989,7 @@ document.getElementById('n-select').addEventListener('change', () => {
     opt.textContent = g.genre === 'Hot 100' ? 'Billboard Hot 100' : g.genre;
     sel.appendChild(opt);
   });
+  sel.value = 'hot100';
 })();
 
 loadChart();
