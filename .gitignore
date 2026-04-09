@@ -11,8 +11,6 @@ deploy.sh
 # Raw data — tracked in repo for preservation (CSVs scraped, all.json downloaded)
 # all.json (~42MB) and CSVs (~38MB) are safe under GitHub's 100MB file limit
 
-# Generated output CSVs
-output/
 
 # macOS
 .DS_Store
