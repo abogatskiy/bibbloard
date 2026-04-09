@@ -553,8 +553,8 @@ function createPlot(divId, curves, yLabel, chartSize) {
       traces.push({
         x: [c.h], y: [c.h],
         mode: 'markers',
-        marker: {color: c.color, size: hl ? 14 : 10, symbol: 'circle',
-                 line: {color: col.bg, width: hl ? 3 : 2}},
+        marker: {color: c.color, size: hl ? 16 : 12, symbol: 'circle',
+                 line: {color: col.bg, width: hl ? 3.5 : 2.5}},
         showlegend: false,
         hovertemplate: '<b>' + c.artist + '</b><br>h&#8209;index\u00a0=\u00a0' + c.h + '<extra></extra>'
       });
@@ -950,12 +950,12 @@ function buildCombinedTable() {
 function renderTables() {
   const q = _filterQuery.combined;
   const all = buildCombinedTable();
-  const filtered = filterRows(all, q);
-  const rows = q ? filtered : filtered.slice(0, _tableOffset);
-  fillTableRows('combined-tbody', sortedRows(rows, _sortState.combined), 'combined');
+  const sorted = sortedRows(filterRows(all, q), _sortState.combined);
+  const rows = q ? sorted : sorted.slice(0, _tableOffset);
+  fillTableRows('combined-tbody', rows, 'combined');
   updateSortHeaders('combined');
   document.getElementById('tbl-count-label').textContent = rows.length;
-  const total = filtered.length;
+  const total = sorted.length;
   const btn = document.getElementById('load-more-btn');
   if (q || _tableOffset >= total) {
     btn.style.display = 'none';
