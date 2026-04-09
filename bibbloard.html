@@ -236,7 +236,7 @@ footer strong{color:var(--text)}
         best to worst. Your h-index is the largest&nbsp;<em>h</em> such that at least&nbsp;<em>h</em>
         of your songs spent at least&nbsp;<em>h</em> weeks on chart.
         <strong style="color:var(--text)">Peak h-index:</strong> same idea, but rank songs by peak
-        chart score (= chart size&nbsp;&minus;&nbsp;peak position), so a Hot&nbsp;100 #1 scores&nbsp;99
+        distance from the end of the chart (= chart size&nbsp;&minus;&nbsp;peak position), so a Hot&nbsp;100 #1 scores&nbsp;99
         and #50 scores&nbsp;50.
       </p>
       <p style="margin-bottom:.5rem">
@@ -279,7 +279,7 @@ footer strong{color:var(--text)}
     </div>
     <div class="plot-card">
       <h2>Peak H-Index &mdash; Top <span class="n-label">10</span></h2>
-      <div class="desc" id="peak-desc"><em>h</em> songs each at least <em>h</em> spots from the top &middot; hover for details</div>
+      <div class="desc" id="peak-desc"><em>h</em> songs each at least <em>h</em> spots from the end of the chart &middot; hover for details</div>
       <div id="peak-plot" class="plot-box"></div>
     </div>
   </div>
@@ -288,7 +288,7 @@ footer strong{color:var(--text)}
   <div class="tables">
     <div class="tbl-card" style="grid-column:1/-1">
       <div class="tbl-header">
-        <h2>Artist Rankings &mdash; Top 50</h2>
+        <h2>Artist Rankings &mdash; Top <span id="tbl-count-label">50</span></h2>
         <input class="tbl-filter" id="combined-filter" type="search" placeholder="Filter artists…" autocomplete="off" data-table="combined">
       </div>
       <table><thead><tr id="combined-thead-row">
@@ -311,7 +311,7 @@ footer strong{color:var(--text)}
 
 <script>
 // ── Genre summary (inlined — small data) ─────────────────────────────────────
-const GENRE_SUMMARY = [{"genre":"Country","key":"country","periods":{"all":{"hhw":19,"hhp":34},"2020":{"hhw":8,"hhp":10},"2015":{"hhw":12,"hhp":15},"2010":{"hhw":15,"hhp":17},"2005":{"hhw":18,"hhp":20},"2000":{"hhw":19,"hhp":21}},"earliest":"1958-10-20","latest":"2026-03-28"},{"genre":"Country Airplay","key":"country_airplay","periods":{"all":{"hhw":19,"hhp":22},"2020":{"hhw":7,"hhp":8},"2015":{"hhw":12,"hhp":13},"2010":{"hhw":16,"hhp":17},"2005":{"hhw":19,"hhp":20},"2000":{"hhw":19,"hhp":22}},"earliest":"2000-01-01","latest":"2026-03-28"},{"genre":"Hot 100","key":"hot100","periods":{"all":{"hhw":18,"hhp":35},"2020":{"hhw":9,"hhp":23},"2015":{"hhw":12,"hhp":26},"2010":{"hhw":14,"hhp":28},"2005":{"hhw":16,"hhp":29},"2000":{"hhw":17,"hhp":30}},"earliest":"1958-08-04","latest":"2026-04-04"},{"genre":"Latin","key":"latin","periods":{"all":{"hhw":17,"hhp":23},"2020":{"hhw":7,"hhp":11},"2015":{"hhw":10,"hhp":13},"2010":{"hhw":13,"hhp":15},"2005":{"hhw":14,"hhp":16},"2000":{"hhw":15,"hhp":19}},"earliest":"1986-09-20","latest":"2026-03-28"},{"genre":"Hip-Hop","key":"hiphop","periods":{"all":{"hhw":14,"hhp":27},"2020":{"hhw":7,"hhp":17},"2015":{"hhw":10,"hhp":18},"2010":{"hhw":10,"hhp":19},"2005":{"hhw":11,"hhp":20},"2000":{"hhw":12,"hhp":20}},"earliest":"1958-10-20","latest":"2026-03-28"},{"genre":"Adult Pop","key":"adult_pop","periods":{"all":{"hhw":14,"hhp":14},"2020":{"hhw":8,"hhp":8},"2015":{"hhw":9,"hhp":9},"2010":{"hhw":12,"hhp":13},"2005":{"hhw":13,"hhp":14},"2000":{"hhw":14,"hhp":14}},"earliest":"2000-01-01","latest":"2026-03-28"},{"genre":"Pop","key":"pop","periods":{"all":{"hhw":13,"hhp":15},"2020":{"hhw":8,"hhp":8},"2015":{"hhw":9,"hhp":10},"2010":{"hhw":11,"hhp":13},"2005":{"hhw":12,"hhp":13},"2000":{"hhw":13,"hhp":14}},"earliest":"1992-10-03","latest":"2026-03-28"},{"genre":"Jazz","key":"jazz","periods":{"all":{"hhw":13,"hhp":15},"2020":{"hhw":7,"hhp":8},"2015":{"hhw":11,"hhp":11},"2010":{"hhw":13,"hhp":13},"2005":{"hhw":13,"hhp":15},"2000":{"hhw":13,"hhp":15}},"earliest":"2005-10-22","latest":"2026-03-28"},{"genre":"Rock","key":"rock","periods":{"all":{"hhw":12,"hhp":15},"2020":{"hhw":5,"hhp":8},"2015":{"hhw":9,"hhp":13},"2010":{"hhw":11,"hhp":15},"2005":{"hhw":12,"hhp":15},"2000":{"hhw":12,"hhp":15}},"earliest":"2009-06-20","latest":"2026-03-28"},{"genre":"Adult Contemporary","key":"adult_contemporary","periods":{"all":{"hhw":12,"hhp":11},"2020":{"hhw":6,"hhp":6},"2015":{"hhw":7,"hhp":8},"2010":{"hhw":10,"hhp":10},"2005":{"hhw":10,"hhp":11},"2000":{"hhw":12,"hhp":11}},"earliest":"2000-01-01","latest":"2026-03-28"},{"genre":"Gospel","key":"gospel","periods":{"all":{"hhw":10,"hhp":9},"2020":{"hhw":6,"hhp":6},"2015":{"hhw":8,"hhp":8},"2010":{"hhw":9,"hhp":8},"2005":{"hhw":10,"hhp":9},"2000":{"hhw":10,"hhp":9}},"earliest":"2005-03-19","latest":"2026-03-28"},{"genre":"Dance/Electronic","key":"dance_electronic","periods":{"all":{"hhw":7,"hhp":10},"2020":{"hhw":5,"hhp":8},"2015":{"hhw":6,"hhp":10},"2010":{"hhw":7,"hhp":10},"2005":{"hhw":7,"hhp":10},"2000":{"hhw":7,"hhp":10}},"earliest":"2013-01-26","latest":"2026-03-28"},{"genre":"Alternative","key":"alternative","periods":{"all":{"hhw":1,"hhp":1},"2020":{"hhw":1,"hhp":1},"2015":{"hhw":1,"hhp":1},"2010":{"hhw":1,"hhp":1},"2005":{"hhw":1,"hhp":1},"2000":{"hhw":1,"hhp":1}},"earliest":"2026-04-11","latest":"2026-04-11"}];
+const GENRE_SUMMARY = [{"genre":"Country","key":"country","periods":{"all":{"hhw":19,"hhp":34},"2020":{"hhw":8,"hhp":10},"2015":{"hhw":12,"hhp":15},"2010":{"hhw":15,"hhp":17},"2005":{"hhw":18,"hhp":20},"2000":{"hhw":19,"hhp":21}},"earliest":"1958-10-20","latest":"2026-03-28"},{"genre":"Country Airplay","key":"country_airplay","periods":{"all":{"hhw":19,"hhp":22},"2020":{"hhw":7,"hhp":8},"2015":{"hhw":12,"hhp":13},"2010":{"hhw":16,"hhp":17},"2005":{"hhw":19,"hhp":20},"2000":{"hhw":19,"hhp":22}},"earliest":"2000-01-01","latest":"2026-03-28"},{"genre":"Hot 100","key":"hot100","periods":{"all":{"hhw":18,"hhp":35},"2020":{"hhw":9,"hhp":23},"2015":{"hhw":12,"hhp":26},"2010":{"hhw":14,"hhp":28},"2005":{"hhw":16,"hhp":29},"2000":{"hhw":17,"hhp":30}},"earliest":"1958-08-04","latest":"2026-04-04"},{"genre":"Latin","key":"latin","periods":{"all":{"hhw":17,"hhp":23},"2020":{"hhw":7,"hhp":11},"2015":{"hhw":10,"hhp":13},"2010":{"hhw":13,"hhp":15},"2005":{"hhw":14,"hhp":16},"2000":{"hhw":15,"hhp":19}},"earliest":"1986-09-20","latest":"2026-03-28"},{"genre":"Hip-Hop","key":"hiphop","periods":{"all":{"hhw":14,"hhp":27},"2020":{"hhw":7,"hhp":17},"2015":{"hhw":10,"hhp":18},"2010":{"hhw":10,"hhp":19},"2005":{"hhw":11,"hhp":20},"2000":{"hhw":12,"hhp":20}},"earliest":"1958-10-20","latest":"2026-03-28"},{"genre":"Adult Pop","key":"adult_pop","periods":{"all":{"hhw":14,"hhp":14},"2020":{"hhw":8,"hhp":8},"2015":{"hhw":9,"hhp":9},"2010":{"hhw":12,"hhp":13},"2005":{"hhw":13,"hhp":14},"2000":{"hhw":14,"hhp":14}},"earliest":"2000-01-01","latest":"2026-03-28"},{"genre":"Pop","key":"pop","periods":{"all":{"hhw":13,"hhp":15},"2020":{"hhw":8,"hhp":8},"2015":{"hhw":9,"hhp":10},"2010":{"hhw":11,"hhp":13},"2005":{"hhw":12,"hhp":13},"2000":{"hhw":13,"hhp":14}},"earliest":"1992-10-03","latest":"2026-03-28"},{"genre":"Jazz","key":"jazz","periods":{"all":{"hhw":13,"hhp":15},"2020":{"hhw":7,"hhp":8},"2015":{"hhw":11,"hhp":11},"2010":{"hhw":13,"hhp":13},"2005":{"hhw":13,"hhp":15},"2000":{"hhw":13,"hhp":15}},"earliest":"2005-10-22","latest":"2026-03-28"},{"genre":"Rock","key":"rock","periods":{"all":{"hhw":12,"hhp":15},"2020":{"hhw":5,"hhp":8},"2015":{"hhw":9,"hhp":13},"2010":{"hhw":11,"hhp":15},"2005":{"hhw":12,"hhp":15},"2000":{"hhw":12,"hhp":15}},"earliest":"2009-06-20","latest":"2026-03-28"},{"genre":"Adult Contemporary","key":"adult_contemporary","periods":{"all":{"hhw":12,"hhp":11},"2020":{"hhw":6,"hhp":6},"2015":{"hhw":7,"hhp":8},"2010":{"hhw":10,"hhp":10},"2005":{"hhw":10,"hhp":11},"2000":{"hhw":12,"hhp":11}},"earliest":"2000-01-01","latest":"2026-03-28"},{"genre":"Gospel","key":"gospel","periods":{"all":{"hhw":10,"hhp":9},"2020":{"hhw":6,"hhp":6},"2015":{"hhw":8,"hhp":8},"2010":{"hhw":9,"hhp":8},"2005":{"hhw":10,"hhp":9},"2000":{"hhw":10,"hhp":9}},"earliest":"2005-03-19","latest":"2026-03-28"},{"genre":"Dance/Electronic","key":"dance_electronic","periods":{"all":{"hhw":7,"hhp":10},"2020":{"hhw":5,"hhp":8},"2015":{"hhw":6,"hhp":10},"2010":{"hhw":7,"hhp":10},"2005":{"hhw":7,"hhp":10},"2000":{"hhw":7,"hhp":10}},"earliest":"2013-01-26","latest":"2026-03-28"}];
 
 // ── Dark mode ─────────────────────────────────────────────────────────────────
 function applyTheme(theme) {
@@ -844,10 +844,12 @@ function buildCombinedTable() {
 function renderTables() {
   const q = _filterQuery.combined;
   const all = buildCombinedTable();
-  const rows = q ? all : all.slice(0, _tableOffset);
-  fillTableRows('combined-tbody', sortedRows(filterRows(rows, q), _sortState.combined), 'combined');
+  const filtered = filterRows(all, q);
+  const rows = q ? filtered : filtered.slice(0, _tableOffset);
+  fillTableRows('combined-tbody', sortedRows(rows, _sortState.combined), 'combined');
   updateSortHeaders('combined');
-  const total = all.length;
+  document.getElementById('tbl-count-label').textContent = rows.length;
+  const total = filtered.length;
   const btn = document.getElementById('load-more-btn');
   if (q || _tableOffset >= total) {
     btn.style.display = 'none';
@@ -868,7 +870,7 @@ function redrawPlots() {
   const cs = _currentData.chart_size || 100;
   createPlot('weeks-plot', _currentData.weeks.slice(0, n), 'Weeks on chart');
   createPlot('peak-plot',  _currentData.peak.slice(0, n),
-             'Chart score (' + cs + '\u2212peak position)', cs);
+             'Distance from end of chart', cs);
 }
 
 // ── Render a full payload ─────────────────────────────────────────────────────
@@ -885,7 +887,7 @@ function renderChart(data) {
   document.getElementById('chart-heading').textContent = chartLabel + ' · ' + periodLabel;
   const cs = data.chart_size || 100;
   document.getElementById('peak-desc').innerHTML =
-    '<em>h</em> songs each at least <em>h</em> spots from the top &middot; hover for details';
+    '<em>h</em> songs each at least <em>h</em> spots from the end of the chart &middot; hover for details';
   redrawPlots();
   renderTables();
   updateGenreTable(document.getElementById('period-select').value);

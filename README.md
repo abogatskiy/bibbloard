@@ -9,7 +9,7 @@ An h-index for Billboard chart artists — because charting once doesn't make yo
 By analogy with the [academic h-index](https://en.wikipedia.org/wiki/H-index):
 
 - **Weeks h-index** — an artist has h-index *h* if they have at least *h* songs that each appeared on the chart for at least *h* weeks
-- **Peak h-index** — an artist has h-index *h* if they have at least *h* songs each placed at least *h* spots from the top (i.e. chart score = chart size − peak position ≥ *h*)
+- **Peak h-index** — an artist has h-index *h* if they have at least *h* songs each at least *h* spots from the end of the chart (i.e. chart size − peak position ≥ *h*, so a Hot 100 #1 scores 99)
 
 Both metrics reward breadth *and* depth: you need many charting songs, and each one has to hold up.
 
