@@ -279,6 +279,11 @@ footer strong{color:var(--text)}
   <!-- Plots -->
   <div class="plots">
     <div class="plot-card">
+      <h2>Integrated H-Index &mdash; Top <span class="n-label">10</span></h2>
+      <div class="desc"><em>h</em> songs each with &ge;&thinsp;<em>h</em> peak-equivalent weeks on chart &middot; hover for details</div>
+      <div id="integrated-plot" class="plot-box"></div>
+    </div>
+    <div class="plot-card">
       <h2>Weeks H-Index &mdash; Top <span class="n-label">10</span></h2>
       <div class="desc"><em>h</em> songs spent &ge;&thinsp;<em>h</em> weeks on chart &middot; hover for details</div>
       <div id="weeks-plot" class="plot-box"></div>
@@ -287,11 +292,6 @@ footer strong{color:var(--text)}
       <h2>Peak H-Index &mdash; Top <span class="n-label">10</span></h2>
       <div class="desc" id="peak-desc"><em>h</em> songs each at least <em>h</em> spots from the end of the chart &middot; hover for details</div>
       <div id="peak-plot" class="plot-box"></div>
-    </div>
-    <div class="plot-card">
-      <h2>Integrated H-Index &mdash; Top <span class="n-label">10</span></h2>
-      <div class="desc"><em>h</em> songs each with &ge;&thinsp;<em>h</em> peak-equivalent weeks on chart &middot; hover for details</div>
-      <div id="integrated-plot" class="plot-box"></div>
     </div>
   </div>
 
@@ -425,8 +425,8 @@ const COLORS = [
 const _expandedArtists = new Set();
 const _filterQuery = { combined: '' };
 const _sortState = {
-  combined: { col: 'weeksH', asc: false },
-  genre:    { col: 'hhw',    asc: false }
+  combined: { col: 'intH', asc: false },
+  genre:    { col: 'hhi',  asc: false }
 };
 let _timelineView  = 'hindex';   // 'hindex' | 'velocity'
 let _timelineSigma = 26;         // weeks
