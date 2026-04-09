@@ -527,17 +527,15 @@ def curve_values(artist: str, artist_songs: dict, metric: str):
         )
     elif metric == "integrated":
         triples = sorted(
-            ((s["integrated_score"], s["song"], s.get("first_year")) for s in songs
-             if s.get("integrated_score", 0) >= 1),
+            ((s["integrated_score"], s["song"], s.get("first_year")) for s in songs),
             reverse=True
         )
     else:
         triples = sorted(
-            ((s["peak_score"], s["song"], s.get("first_year")) for s in songs
-             if s.get("peak_score", 0) >= 1),
+            ((s["peak_score"], s["song"], s.get("first_year")) for s in songs),
             reverse=True
         )
-    triples = [(v, nm, yr) for v, nm, yr in triples if v >= 1][:160]
+    triples = triples[:160]
     return ([v for v, _, _ in triples],
             [nm for _, nm, _ in triples],
             [yr for _, _, yr in triples])
