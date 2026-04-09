@@ -564,7 +564,7 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
             {a for a, _, _ in peak_ranking[:TOP_TABLE]}
         )
         i30_needed = {
-            a: {s["song"] for s in artist_songs[a] if s.get("integrated_score", 0) >= 1}
+            a: {s["song"] for s in artist_songs[a]}
             for a in i30_set
         }
         raw_pos = {a: defaultdict(list) for a in i30_set}
@@ -721,7 +721,7 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
         # Cover all u_union artists so injected/highlighted artists work too
         u_i30_set    = set(u_union)
         u_i30_needed = {
-            a: {s["song"] for s in u_artist_songs[a] if s.get("integrated_score", 0) >= 1}
+            a: {s["song"] for s in u_artist_songs[a]}
             for a in u_i30_set if a in u_artist_songs
         }
         u_raw_pos = {a: defaultdict(list) for a in u_i30_set}
