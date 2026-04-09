@@ -543,6 +543,36 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
                         "color": COLORS[i], "values": vals, "songs": names, "years": years})
         return out
 
+    # ── Per-song weekly positions for integrated mini-chart popups ───────────
+    int_song_pos = {}
+    if rows:
+        i30_set = {a for a, _, _ in integrated_ranking[:TOP_PLOT]}
+        i30_needed = {
+            a: {s["song"] for s in artist_songs[a] if s.get("integrated_score", 0) >= 1}
+            for a in i30_set
+        }
+        raw_pos = {a: defaultdict(list) for a in i30_set}
+        for r in rows:
+            a = r["artist"]
+            if a not in i30_set: continue
+            song = r["song"]
+            if song not in i30_needed.get(a, ()): continue
+            date = r["date"]
+            if period_since and date < period_since: continue
+            pos = r.get("peak")
+            cs  = chart_sizes.get(date, 0) if chart_sizes else 0
+            if not isinstance(pos, int) or pos <= 0 or pos > cs or cs == 0: continue
+            raw_pos[a][song].append((date, pos, cs))
+        for a in i30_set:
+            ad = {}
+            for song, wdata in raw_pos[a].items():
+                sd = sorted(wdata)
+                peak_pos = min(p for _, p, _ in sd)
+                scores   = [round((cs - p) / cs, 3) for _, p, cs in sd]
+                ad[song] = {"s": scores, "pk": peak_pos}
+            if ad:
+                int_song_pos[a] = ad
+
     # ── Timelines + velocity for all table artists ────────────────────────────
     table_w = weeks_ranking[:TOP_TABLE]
     table_p = peak_ranking[:TOP_TABLE]
@@ -645,6 +675,7 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
         "weeksCurves":      weeks_extra,
         "peakCurves":       peak_extra,
         "integratedCurves": integrated_extra,
+        "intSongPos":       int_song_pos,
         "timelines":  timelines,
     }
 

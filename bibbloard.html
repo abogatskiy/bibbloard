@@ -91,6 +91,11 @@ h1{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:3rem;le
 #loading{font-size:.78rem;color:var(--muted);display:none}
 
 
+/* ── Song mini-chart popup ───────────────────────────────────────────────── */
+#song-popup{display:none;position:fixed;z-index:999;background:var(--surface);
+  border:1px solid var(--border);border-radius:4px;padding:5px 7px;
+  pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+
 /* ── Plots ────────────────────────────────────────────────────────────────── */
 .plots{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:1.5rem;margin-bottom:2rem}
 .plot-card-full{grid-column:1/-1;max-width:900px;margin-inline:auto;width:100%}
@@ -323,6 +328,7 @@ footer strong{color:var(--text)}
   </div>
 
 </div>
+<div id="song-popup"></div>
 
 <script>
 // ── Genre summary (inlined — small data) ─────────────────────────────────────
@@ -432,6 +438,7 @@ const _sortState = {
   genre:    { col: 'hhi',  asc: false }
 };
 let _timelineView  = 'hindex';   // 'hindex' | 'velocity'
+let _intSongPos    = {};
 let _timelineSigma = 26;         // weeks
 updateGenreTable('all');
 
@@ -587,9 +594,58 @@ function createPlot(divId, curves, yLabel, chartSize) {
     item.addEventListener('mouseenter', () => highlightArtistInPlots(name, true));
     item.addEventListener('mouseleave', () => highlightArtistInPlots(name, false));
   });
+
+  if (divId === 'integrated-plot') {
+    const popup  = document.getElementById('song-popup');
+    const plotEl = document.getElementById(divId);
+    plotEl.on('plotly_hover', evData => {
+      const pt       = evData.points[0];
+      const songName = pt.data.customdata?.[pt.pointIndex]?.[0];
+      if (!songName) return;
+      const details  = _intSongPos[pt.data.name]?.[songName];
+      if (!details)  return;
+      popup.innerHTML =
+        `<div style="font-size:.73rem;color:var(--muted);max-width:156px;overflow:hidden;` +
+        `text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px">${songName}</div>` +
+        songMiniSvg(details, pt.data.line.color);
+      popup.style.display = 'block';
+      const ev = evData.event, vw = window.innerWidth, vh = window.innerHeight;
+      let lx = ev.clientX + 14, ty = ev.clientY - 46;
+      if (lx + 182 > vw) lx = ev.clientX - 186;
+      if (ty < 4) ty = 4;
+      if (ty + 110 > vh) ty = vh - 114;
+      popup.style.left = lx + 'px';
+      popup.style.top  = ty + 'px';
+    });
+    plotEl.on('plotly_unhover', () => { popup.style.display = 'none'; });
+  }
 }
 
 // ── Velocity colour ───────────────────────────────────────────────────────────
+// ── Song mini-chart SVG (integrated plot popup) ───────────────────────────
+function songMiniSvg(details, barColor) {
+  const scores = details.s, pk = details.pk, n = scores.length;
+  const maxS = Math.max(...scores);
+  if (!maxS || !n) return '';
+  const norm  = scores.map(s => s / maxS);
+  const W = 160, H = 72, padL = 4, padB = 16, padT = 13;
+  const plotH = H - padB - padT;
+  const barW  = Math.max(1, Math.floor((W - padL) / n) - 1);
+  const cs    = getComputedStyle(document.documentElement);
+  const fg    = cs.getPropertyValue('--text').trim()  || '#333';
+  const muted = cs.getPropertyValue('--muted').trim() || '#888';
+  const bars  = norm.map((v, i) => {
+    const bh = Math.max(1, Math.round(v * plotH));
+    const x  = padL + i * (barW + 1);
+    return `<rect x="${x}" y="${padT + plotH - bh}" width="${barW}" height="${bh}" fill="${barColor}" opacity=".75"/>`;
+  }).join('');
+  return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" style="display:block">` +
+    bars +
+    `<text x="${W/2}" y="${H-2}" text-anchor="middle" font-size="9" fill="${muted}" font-family="Georgia,serif">${n} wk${n===1?'':'s'}</text>` +
+    `<text x="${W-2}" y="11" text-anchor="end" font-size="9" fill="${fg}" font-family="Georgia,serif">#${pk}</text>` +
+    `</svg>`;
+}
+
 function velocityColor(v) {
   if (!v || v <= 0) return null;
   // Ramp from a muted rose → vivid red as v grows (max at v=5)
@@ -916,6 +972,7 @@ function redrawPlots() {
 // ── Render a full payload ─────────────────────────────────────────────────────
 function renderChart(data) {
   _currentData  = data;
+  _intSongPos   = data.intSongPos ?? {};
   _tableOffset  = TABLE_STEP;
   _expandedArtists.clear();
   _filterQuery.combined = '';
