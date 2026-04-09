@@ -409,7 +409,6 @@ function updateGenreTable(period) {
   });
   updateSortHeaders('genre');
 }
-updateGenreTable('all');
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let _currentData  = null;
@@ -431,7 +430,7 @@ const _sortState = {
 };
 let _timelineView  = 'hindex';   // 'hindex' | 'velocity'
 let _timelineSigma = 26;         // weeks
-
+updateGenreTable('all');
 
 // ── Helpers for expanded-artist highlights ────────────────────────────────────
 function getExpandedArtistNames() {
