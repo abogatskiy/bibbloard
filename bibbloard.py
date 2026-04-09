@@ -596,9 +596,31 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
                 break
         return max(0, h_now - h_ago)
 
-    w_vel = {a: get_velocity(a, w_tl) for a, _, _ in table_w} if rows else {}
-    p_vel = {a: get_velocity(a, p_tl) for a, _, _ in table_p} if rows else {}
-    i_vel = {a: get_velocity(a, i_tl) for a, _, _ in table_i} if rows else {}
+    # Velocities for all union artists (timelines were computed for all_artists already)
+    w_vel = {a: get_velocity(a, w_tl) for a in all_artists} if rows else {}
+    p_vel = {a: get_velocity(a, p_tl) for a in all_artists} if rows else {}
+    i_vel = {a: get_velocity(a, i_tl) for a in all_artists} if rows else {}
+
+    # Full-ranking lookup maps so cross-table joins are accurate
+    wh_map = {a: h for a, h, n in weeks_ranking}
+    ph_map = {a: h for a, h, n in peak_ranking}
+    ih_map = {a: h for a, h, n in integrated_ranking}
+    n_map  = {a: n for a, h, n in weeks_ranking}   # n is identical across all rankings
+
+    # Single combined table covering the union of the three top-200 lists,
+    # with correct h-indices from full rankings (not just top-200 lookups).
+    union_artists = sorted(
+        {a for a, _, _ in table_w} | {a for a, _, _ in table_p} | {a for a, _, _ in table_i},
+        key=lambda a: (-ih_map.get(a, 0), -wh_map.get(a, 0), -ph_map.get(a, 0), a)
+    )
+    combined_table = [
+        [r, a,
+         ih_map.get(a, 0), i_vel.get(a, 0),
+         wh_map.get(a, 0), w_vel.get(a, 0),
+         ph_map.get(a, 0), p_vel.get(a, 0),
+         n_map.get(a, 0)]
+        for r, a in enumerate(union_artists, 1)
+    ]
 
     # Compact curve values for table artists not already in the top-N plot data.
     # These let the frontend draw a curve for any filtered/highlighted artist.
@@ -606,11 +628,11 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
     p_top_set = {a for a, _, _ in peak_ranking[:TOP_PLOT]}
     i_top_set = {a for a, _, _ in integrated_ranking[:TOP_PLOT]}
     weeks_extra      = {a: dict(zip(("v","s","y"), curve_values(a, artist_songs, "weeks")))
-                        for a, _, _ in table_w if a not in w_top_set}
+                        for a in union_artists if a not in w_top_set}
     peak_extra       = {a: dict(zip(("v","s","y"), curve_values(a, artist_songs, "peak")))
-                        for a, _, _ in table_p if a not in p_top_set}
+                        for a in union_artists if a not in p_top_set}
     integrated_extra = {a: dict(zip(("v","s","y"), curve_values(a, artist_songs, "integrated")))
-                        for a, _, _ in table_i if a not in i_top_set}
+                        for a in union_artists if a not in i_top_set}
 
     return {
         "hhw": hhw, "hhp": hhp, "hhi": hhi,
@@ -619,9 +641,7 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
         "weeks":      plot_data(weeks_ranking,      "weeks"),
         "peak":       plot_data(peak_ranking,        "peak"),
         "integrated": plot_data(integrated_ranking,  "integrated"),
-        "weeksTable":      [[r, a, h, n, w_vel.get(a, 0)] for r, (a, h, n) in enumerate(table_w, 1)],
-        "peakTable":       [[r, a, h, n, p_vel.get(a, 0)] for r, (a, h, n) in enumerate(table_p, 1)],
-        "integratedTable": [[r, a, h, n, i_vel.get(a, 0)] for r, (a, h, n) in enumerate(table_i, 1)],
+        "combinedTable":    combined_table,
         "weeksCurves":      weeks_extra,
         "peakCurves":       peak_extra,
         "integratedCurves": integrated_extra,

@@ -475,9 +475,9 @@ function createPlot(divId, curves, yLabel, chartSize) {
     const extraCurves= divId === 'weeks-plot'      ? _currentData.weeksCurves
                      : divId === 'integrated-plot' ? _currentData.integratedCurves
                      : _currentData.peakCurves;
-    const tableData  = divId === 'weeks-plot'      ? _currentData.weeksTable
-                     : divId === 'integrated-plot' ? _currentData.integratedTable
-                     : _currentData.peakTable;
+    // combined row: [rank, artist, intH, iYoY, weeksH, wYoY, peakH, pYoY, n]
+    const hIdx       = divId === 'weeks-plot' ? 4 : divId === 'integrated-plot' ? 2 : 6;
+    const combinedMap= new Map((_currentData.combinedTable ?? []).map(r => [r[1], r]));
     const extras = [];
     for (const artist of highlighted) {
       if (inCurves.has(artist)) continue;
@@ -486,10 +486,10 @@ function createPlot(divId, curves, yLabel, chartSize) {
       if (entry) { extras.push(entry); continue; }
       // Fall back to compact curve values for artists ranked beyond top-N
       const ec   = extraCurves?.[artist];
-      const row  = tableData?.find(r => r[1] === artist);
+      const row  = combinedMap.get(artist);
       if (ec && row) {
         const color = COLORS[(row[0] - 1) % COLORS.length];
-        extras.push({artist, h: row[2], n: row[3], color,
+        extras.push({artist, h: row[hIdx], n: row[8], color,
                      values: ec.v, songs: ec.s ?? [], years: ec.y ?? []});
       }
     }
@@ -878,19 +878,7 @@ function filterRows(rows, query) {
 }
 
 function buildCombinedTable() {
-  if (!_currentData) return [];
-  const peakMap = new Map(_currentData.peakTable.map(r => [r[1], r]));
-  const intMap  = new Map((_currentData.integratedTable ?? []).map(r => [r[1], r]));
-  return _currentData.weeksTable.map(r => {
-    const peakRow = peakMap.get(r[1]);
-    const intRow  = intMap.get(r[1]);
-    // [rank, artist, intH, iYoY, weeksH, wYoY, peakH, pYoY, n]
-    return [r[0], r[1],
-            intRow?.[2] ?? 0, intRow?.[4] ?? 0,
-            r[2], r[4],
-            peakRow?.[2] ?? 0, peakRow?.[4] ?? 0,
-            r[3]];
-  });
+  return _currentData?.combinedTable ?? [];
 }
 
 function renderTables() {
