@@ -260,16 +260,17 @@ def build_chart_size_map(rows: list) -> dict:
 # ── Deduplication with optional date filter ───────────────────────────────────
 
 def deduplicate_rows(rows: list, since: str = None, until: str = None,
-                     chart_sizes: dict = None) -> dict:
+                     chart_sizes: dict = None, unified_cs: int = None) -> dict:
     """
     Aggregate rows into artist_songs dict:
       artist -> [{song, weeks, peak_score, first_year}]
 
     weeks      = chart-week appearances in the date window.
     peak_score = best (highest) score in the window, where
-                 score = chart_size_on_that_date - peak_position.
-                 Using per-week chart sizes ensures fair comparison across
-                 eras when the chart length changed (e.g. AC: 30→40 in 2004).
+                 score = eff_cs - peak_position.
+    integrated_score = cumulative (eff_cs − pos) / eff_cs per week.
+    eff_cs     = unified_cs if set, else the actual per-week chart size.
+                 Setting unified_cs=100 enables fair cross-chart comparison.
     first_year = calendar year of first chart appearance in the window.
     """
     raw = {}   # (artist, song) -> [count, best_peak_score, integrated_score, first_date]
@@ -281,11 +282,13 @@ def deduplicate_rows(rows: list, since: str = None, until: str = None,
         peak = r.get("peak", 0)
         if not isinstance(peak, int) or peak <= 0:
             continue
-        # Per-week chart size → score for this appearance
-        cs    = chart_sizes.get(r["date"], 0) if chart_sizes else 0
-        score = max(cs - peak, 0)
-        key   = (r["artist"], r["song"])
-        norm = score / cs if cs > 0 else 0  # normalized: (cs−pos)/cs per week
+        cs = chart_sizes.get(r["date"], 0) if chart_sizes else 0
+        if cs == 0 or peak > cs:       # skip entries with no valid chart-size data
+            continue
+        eff_cs = unified_cs if unified_cs is not None else cs
+        score  = max(eff_cs - peak, 0)
+        key    = (r["artist"], r["song"])
+        norm   = score / eff_cs        # normalized: (eff_cs−pos)/eff_cs per week
         if key not in raw:
             raw[key] = [1, score, norm, r["date"]]
         else:
@@ -542,11 +545,12 @@ def curve_values(artist: str, artist_songs: dict, metric: str):
 def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_songs, hhw, hhp, hhi,
                         chart_size: int = 100, rows: list = None, latest_date: str = "",
                         period_since: str = None, tick_w=None, tick_p=None, tick_i=None,
-                        chart_sizes: dict = None) -> dict:
-    def plot_data(ranking, metric):
+                        chart_sizes: dict = None, unified_cs: int = None) -> dict:
+    def plot_data(ranking, metric, songs=None):
+        if songs is None: songs = artist_songs
         out = []
         for i, (a, h, n) in enumerate(ranking[:TOP_PLOT]):
-            vals, names, years = curve_values(a, artist_songs, metric)
+            vals, names, years = curve_values(a, songs, metric)
             out.append({"artist": a, "h": h, "n": n,
                         "color": COLORS[i], "values": vals, "songs": names, "years": years})
         return out
@@ -672,6 +676,83 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
     integrated_extra = {a: dict(zip(("v","s","y"), curve_values(a, artist_songs, "integrated")))
                         for a in union_artists if a not in i_top_set}
 
+    # ── Unified chart size variant (cs=unified_cs for cross-chart comparison) ──
+    u: dict = {}
+    if unified_cs is not None and rows:
+        u_artist_songs = deduplicate_rows(rows, period_since, chart_sizes=chart_sizes,
+                                          unified_cs=unified_cs)
+        _, u_pr, u_ir = compute_rankings(u_artist_songs)
+        u_hhp = hh_index(u_pr)
+        u_hhi = hh_index(u_ir)
+
+        u_table_p = u_pr[:TOP_TABLE]
+        u_table_i = u_ir[:TOP_TABLE]
+        u_ph_map  = {a: h for a, h, n in u_pr}
+        u_ih_map  = {a: h for a, h, n in u_ir}
+        u_p_top   = {a for a, _, _ in u_pr[:TOP_PLOT]}
+        u_i_top   = {a for a, _, _ in u_ir[:TOP_PLOT]}
+
+        u_union = sorted(
+            {a for a, _, _ in u_table_p} | {a for a, _, _ in u_table_i}
+            | {a for a, _, _ in weeks_ranking[:TOP_TABLE]},
+            key=lambda a: (-u_ih_map.get(a, 0), -wh_map.get(a, 0), -u_ph_map.get(a, 0), a)
+        )
+        u_n_map = {a: len(songs) for a, songs in u_artist_songs.items()}
+        u_combined_table = [
+            [r, a,
+             u_ih_map.get(a, 0), i_vel.get(a, 0),
+             wh_map.get(a, 0),   w_vel.get(a, 0),
+             u_ph_map.get(a, 0), p_vel.get(a, 0),
+             u_n_map.get(a, 0)]
+            for r, a in enumerate(u_union, 1)
+        ]
+
+        # Extra compact curves for highlighted artists not in top-N unified plots
+        u_peak_extra = {a: dict(zip(("v","s","y"), curve_values(a, u_artist_songs, "peak")))
+                        for a in u_union if a not in u_p_top and a in u_artist_songs}
+        u_int_extra  = {a: dict(zip(("v","s","y"), curve_values(a, u_artist_songs, "integrated")))
+                        for a in u_union if a not in u_i_top and a in u_artist_songs}
+
+        # Per-song weekly positions for unified integrated mini-chart popups
+        u_i30_set    = {a for a, _, _ in u_ir[:TOP_PLOT]}
+        u_i30_needed = {
+            a: {s["song"] for s in u_artist_songs[a] if s.get("integrated_score", 0) >= 1}
+            for a in u_i30_set if a in u_artist_songs
+        }
+        u_raw_pos = {a: defaultdict(list) for a in u_i30_set}
+        for r in rows:
+            a = r["artist"]
+            if a not in u_i30_set: continue
+            song = r["song"]
+            if song not in u_i30_needed.get(a, ()): continue
+            date = r["date"]
+            if period_since and date < period_since: continue
+            pos = r.get("peak")
+            cs  = chart_sizes.get(date, 0) if chart_sizes else 0
+            if not isinstance(pos, int) or pos <= 0 or pos > cs or cs == 0: continue
+            u_raw_pos[a][song].append((date, pos, cs))
+        u_int_song_pos: dict = {}
+        for a in u_i30_set:
+            ad = {}
+            for song, wdata in u_raw_pos.get(a, {}).items():
+                sd       = sorted(wdata)
+                peak_pos = min(p for _, p, _ in sd)
+                # Scores normalised to unified_cs instead of per-week actual cs
+                scores   = [round((unified_cs - p) / unified_cs, 3) for _, p, _ in sd]
+                ad[song] = {"s": scores, "pk": peak_pos}
+            if ad:
+                u_int_song_pos[a] = ad
+
+        u = {
+            "hhp": u_hhp, "hhi": u_hhi, "chart_size": unified_cs,
+            "peak":             plot_data(u_pr, "peak",       u_artist_songs),
+            "integrated":       plot_data(u_ir, "integrated", u_artist_songs),
+            "combinedTable":    u_combined_table,
+            "peakCurves":       u_peak_extra,
+            "integratedCurves": u_int_extra,
+            "intSongPos":       u_int_song_pos,
+        }
+
     return {
         "hhw": hhw, "hhp": hhp, "hhi": hhi,
         "chart_size": chart_size,
@@ -685,6 +766,7 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
         "integratedCurves": integrated_extra,
         "intSongPos":       int_song_pos,
         "timelines":  timelines,
+        "u":          u,
     }
 
 def save_chart_data(payload: dict, path: Path):
@@ -826,15 +908,18 @@ def main():
             hhw         = hh_index(wr)
             hhp         = hh_index(pr)
             hhi         = hh_index(ir)
-            hot100_periods[period_key] = {"hhw": hhw, "hhp": hhp, "hhi": hhi}
-            fname = "hot100.json" if period_key == "all" else f"hot100_{period_key}.json"
-            save_chart_data(
-                build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
-                                    rows=hot100_rows, latest_date=hot100_max,
-                                    period_since=period_since,
-                                    tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
-                                    chart_sizes=hot100_chart_sizes),
-                DATA_DIR / fname)
+            fname   = "hot100.json" if period_key == "all" else f"hot100_{period_key}.json"
+            payload = build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
+                                          rows=hot100_rows, latest_date=hot100_max,
+                                          period_since=period_since,
+                                          tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
+                                          chart_sizes=hot100_chart_sizes, unified_cs=100)
+            save_chart_data(payload, DATA_DIR / fname)
+            hot100_periods[period_key] = {
+                "hhw": hhw, "hhp": hhp, "hhi": hhi,
+                "u_hhp": payload["u"].get("hhp", hhp),
+                "u_hhi": payload["u"].get("hhi", hhi),
+            }
 
         # ── Genre charts ─────────────────────────────────────────────────────
         genre_summary: list = []
@@ -853,15 +938,18 @@ def main():
                 hhw         = hh_index(wr)
                 hhp         = hh_index(pr)
                 hhi         = hh_index(ir)
-                genre_periods[period_key] = {"hhw": hhw, "hhp": hhp, "hhi": hhi}
-                fname  = f"{key}.json" if period_key == "all" else f"{key}_{period_key}.json"
-                save_chart_data(
-                    build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
-                                        rows=genre_rows, latest_date=genre_max,
-                                        period_since=period_since,
-                                        tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
-                                        chart_sizes=gchart_sizes),
-                    DATA_DIR / fname)
+                fname   = f"{key}.json" if period_key == "all" else f"{key}_{period_key}.json"
+                payload = build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
+                                              rows=genre_rows, latest_date=genre_max,
+                                              period_since=period_since,
+                                              tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
+                                              chart_sizes=gchart_sizes, unified_cs=100)
+                save_chart_data(payload, DATA_DIR / fname)
+                genre_periods[period_key] = {
+                    "hhw": hhw, "hhp": hhp, "hhi": hhi,
+                    "u_hhp": payload["u"].get("hhp", hhp),
+                    "u_hhi": payload["u"].get("hhi", hhi),
+                }
             cs_vals  = list(gchart_sizes.values())
             cs_lo, cs_hi = (min(cs_vals), max(cs_vals)) if cs_vals else (100, 100)
             genre_summary.append({

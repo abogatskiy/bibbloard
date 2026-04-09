@@ -220,6 +220,9 @@ footer strong{color:var(--text)}
       <option value="2005">2005</option>
       <option value="2000">2000</option>
     </select>
+    <label style="display:flex;align-items:center;gap:.3rem;cursor:pointer;font-size:.84rem;color:var(--muted);margin-left:.4rem" title="Treat all charts as 100 entries wide for fair cross-chart comparison">
+      <input type="checkbox" id="unified-cs"> Unified cs&nbsp;(100)
+    </label>
   </div>
   <div class="section-title">Genre H-H-Index Ranking</div>
   <div class="tables" style="margin-bottom:2rem">
@@ -334,7 +337,7 @@ footer strong{color:var(--text)}
 
 <script>
 // ── Genre summary (inlined — small data) ─────────────────────────────────────
-const GENRE_SUMMARY = [{"genre":"Country","key":"country","periods":{"all":{"hhw":19,"hhp":34,"hhi":16},"2020":{"hhw":8,"hhp":10,"hhi":7},"2015":{"hhw":12,"hhp":15,"hhi":10},"2010":{"hhw":15,"hhp":17,"hhi":13},"2005":{"hhw":18,"hhp":20,"hhi":14},"2000":{"hhw":19,"hhp":21,"hhi":15}},"earliest":"1958-10-20","latest":"2026-03-28","cs_lo":19,"cs_hi":58},{"genre":"Country Airplay","key":"country_airplay","periods":{"all":{"hhw":19,"hhp":22,"hhi":16},"2020":{"hhw":7,"hhp":8,"hhi":7},"2015":{"hhw":12,"hhp":13,"hhi":12},"2010":{"hhw":16,"hhp":17,"hhi":14},"2005":{"hhw":19,"hhp":20,"hhi":15},"2000":{"hhw":19,"hhp":22,"hhi":16}},"earliest":"2000-01-01","latest":"2026-03-28","cs_lo":53,"cs_hi":60},{"genre":"Hot 100","key":"hot100","periods":{"all":{"hhw":18,"hhp":35,"hhi":14},"2020":{"hhw":9,"hhp":23,"hhi":9},"2015":{"hhw":12,"hhp":26,"hhi":10},"2010":{"hhw":14,"hhp":28,"hhi":11},"2005":{"hhw":16,"hhp":29,"hhi":12},"2000":{"hhw":17,"hhp":30,"hhi":12}},"earliest":"1958-08-04","latest":"2026-04-04","cs_lo":76,"cs_hi":100},{"genre":"Latin","key":"latin","periods":{"all":{"hhw":17,"hhp":23,"hhi":13},"2020":{"hhw":7,"hhp":11,"hhi":6},"2015":{"hhw":10,"hhp":13,"hhi":8},"2010":{"hhw":13,"hhp":15,"hhi":11},"2005":{"hhw":14,"hhp":16,"hhi":11},"2000":{"hhw":15,"hhp":19,"hhi":12}},"earliest":"1986-09-20","latest":"2026-03-28","cs_lo":29,"cs_hi":50},{"genre":"Hip-Hop","key":"hiphop","periods":{"all":{"hhw":14,"hhp":27,"hhi":11},"2020":{"hhw":7,"hhp":17,"hhi":7},"2015":{"hhw":10,"hhp":18,"hhi":8},"2010":{"hhw":10,"hhp":19,"hhi":9},"2005":{"hhw":11,"hhp":20,"hhi":10},"2000":{"hhw":12,"hhp":20,"hhi":10}},"earliest":"1958-10-20","latest":"2026-03-28","cs_lo":19,"cs_hi":80},{"genre":"Adult Pop","key":"adult_pop","periods":{"all":{"hhw":14,"hhp":14,"hhi":11},"2020":{"hhw":8,"hhp":8,"hhi":6},"2015":{"hhw":9,"hhp":9,"hhi":8},"2010":{"hhw":12,"hhp":13,"hhi":10},"2005":{"hhw":13,"hhp":14,"hhi":10},"2000":{"hhw":14,"hhp":14,"hhi":11}},"earliest":"2000-01-01","latest":"2026-03-28","cs_lo":35,"cs_hi":40},{"genre":"Pop","key":"pop","periods":{"all":{"hhw":13,"hhp":15,"hhi":11},"2020":{"hhw":8,"hhp":8,"hhi":7},"2015":{"hhw":9,"hhp":10,"hhi":8},"2010":{"hhw":11,"hhp":13,"hhi":9},"2005":{"hhw":12,"hhp":13,"hhi":10},"2000":{"hhw":13,"hhp":14,"hhi":11}},"earliest":"1992-10-03","latest":"2026-03-28","cs_lo":34,"cs_hi":40},{"genre":"Jazz","key":"jazz","periods":{"all":{"hhw":13,"hhp":15,"hhi":11},"2020":{"hhw":7,"hhp":8,"hhi":7},"2015":{"hhw":11,"hhp":11,"hhi":9},"2010":{"hhw":13,"hhp":13,"hhi":10},"2005":{"hhw":13,"hhp":15,"hhi":11},"2000":{"hhw":13,"hhp":15,"hhi":11}},"earliest":"2005-10-22","latest":"2026-03-28","cs_lo":25,"cs_hi":40},{"genre":"Rock","key":"rock","periods":{"all":{"hhw":12,"hhp":15,"hhi":9},"2020":{"hhw":5,"hhp":8,"hhi":5},"2015":{"hhw":9,"hhp":13,"hhi":7},"2010":{"hhw":11,"hhp":15,"hhi":9},"2005":{"hhw":12,"hhp":15,"hhi":9},"2000":{"hhw":12,"hhp":15,"hhi":9}},"earliest":"2009-06-20","latest":"2026-03-28","cs_lo":13,"cs_hi":50},{"genre":"Adult Contemporary","key":"adult_contemporary","periods":{"all":{"hhw":12,"hhp":11,"hhi":9},"2020":{"hhw":6,"hhp":6,"hhi":4},"2015":{"hhw":7,"hhp":8,"hhi":6},"2010":{"hhw":10,"hhp":10,"hhi":8},"2005":{"hhw":10,"hhp":11,"hhi":8},"2000":{"hhw":12,"hhp":11,"hhi":9}},"earliest":"2000-01-01","latest":"2026-03-28","cs_lo":20,"cs_hi":40},{"genre":"Gospel","key":"gospel","periods":{"all":{"hhw":10,"hhp":9,"hhi":7},"2020":{"hhw":6,"hhp":6,"hhi":5},"2015":{"hhw":8,"hhp":8,"hhi":6},"2010":{"hhw":9,"hhp":8,"hhi":7},"2005":{"hhw":10,"hhp":9,"hhi":7},"2000":{"hhw":10,"hhp":9,"hhi":7}},"earliest":"2005-03-19","latest":"2026-03-28","cs_lo":17,"cs_hi":25},{"genre":"Dance/Electronic","key":"dance_electronic","periods":{"all":{"hhw":7,"hhp":10,"hhi":6},"2020":{"hhw":5,"hhp":8,"hhi":5},"2015":{"hhw":6,"hhp":10,"hhi":6},"2010":{"hhw":7,"hhp":10,"hhi":6},"2005":{"hhw":7,"hhp":10,"hhi":6},"2000":{"hhw":7,"hhp":10,"hhi":6}},"earliest":"2013-01-26","latest":"2026-03-28","cs_lo":15,"cs_hi":50}];
+const GENRE_SUMMARY = [{"genre":"Country","key":"country","periods":{"all":{"hhw":19,"hhp":34,"hhi":16,"u_hhp":46,"u_hhi":17},"2020":{"hhw":8,"hhp":10,"hhi":7,"u_hhp":11,"u_hhi":7},"2015":{"hhw":12,"hhp":15,"hhi":10,"u_hhp":18,"u_hhi":11},"2010":{"hhw":15,"hhp":17,"hhi":13,"u_hhp":23,"u_hhi":14},"2005":{"hhw":18,"hhp":20,"hhi":14,"u_hhp":25,"u_hhi":16},"2000":{"hhw":19,"hhp":21,"hhi":15,"u_hhp":26,"u_hhi":17}},"earliest":"1958-10-20","latest":"2026-03-28","cs_lo":19,"cs_hi":58},{"genre":"Country Airplay","key":"country_airplay","periods":{"all":{"hhw":19,"hhp":22,"hhi":16,"u_hhp":25,"u_hhi":17},"2020":{"hhw":7,"hhp":8,"hhi":7,"u_hhp":8,"u_hhi":7},"2015":{"hhw":12,"hhp":13,"hhi":12,"u_hhp":14,"u_hhi":12},"2010":{"hhw":16,"hhp":17,"hhi":14,"u_hhp":18,"u_hhi":15},"2005":{"hhw":19,"hhp":20,"hhi":15,"u_hhp":22,"u_hhi":17},"2000":{"hhw":19,"hhp":22,"hhi":16,"u_hhp":25,"u_hhi":17}},"earliest":"2000-01-01","latest":"2026-03-28","cs_lo":53,"cs_hi":60},{"genre":"Hot 100","key":"hot100","periods":{"all":{"hhw":18,"hhp":35,"hhi":14,"u_hhp":35,"u_hhi":14},"2020":{"hhw":9,"hhp":23,"hhi":9,"u_hhp":23,"u_hhi":9},"2015":{"hhw":12,"hhp":26,"hhi":10,"u_hhp":26,"u_hhi":10},"2010":{"hhw":14,"hhp":28,"hhi":11,"u_hhp":28,"u_hhi":11},"2005":{"hhw":16,"hhp":29,"hhi":12,"u_hhp":29,"u_hhi":12},"2000":{"hhw":17,"hhp":30,"hhi":12,"u_hhp":30,"u_hhi":12}},"earliest":"1958-08-04","latest":"2026-04-04","cs_lo":76,"cs_hi":100},{"genre":"Latin","key":"latin","periods":{"all":{"hhw":17,"hhp":23,"hhi":13,"u_hhp":32,"u_hhi":15},"2020":{"hhw":7,"hhp":11,"hhi":6,"u_hhp":12,"u_hhi":7},"2015":{"hhw":10,"hhp":13,"hhi":8,"u_hhp":16,"u_hhi":9},"2010":{"hhw":13,"hhp":15,"hhi":11,"u_hhp":19,"u_hhi":12},"2005":{"hhw":14,"hhp":16,"hhi":11,"u_hhp":20,"u_hhi":12},"2000":{"hhw":15,"hhp":19,"hhi":12,"u_hhp":23,"u_hhi":14}},"earliest":"1986-09-20","latest":"2026-03-28","cs_lo":29,"cs_hi":50},{"genre":"Hip-Hop","key":"hiphop","periods":{"all":{"hhw":14,"hhp":27,"hhi":11,"u_hhp":38,"u_hhi":13},"2020":{"hhw":7,"hhp":17,"hhi":7,"u_hhp":22,"u_hhi":7},"2015":{"hhw":10,"hhp":18,"hhi":8,"u_hhp":26,"u_hhi":8},"2010":{"hhw":10,"hhp":19,"hhi":9,"u_hhp":26,"u_hhi":10},"2005":{"hhw":11,"hhp":20,"hhi":10,"u_hhp":27,"u_hhi":10},"2000":{"hhw":12,"hhp":20,"hhi":10,"u_hhp":27,"u_hhi":11}},"earliest":"1958-10-20","latest":"2026-03-28","cs_lo":19,"cs_hi":80},{"genre":"Adult Pop","key":"adult_pop","periods":{"all":{"hhw":14,"hhp":14,"hhi":11,"u_hhp":16,"u_hhi":13},"2020":{"hhw":8,"hhp":8,"hhi":6,"u_hhp":8,"u_hhi":7},"2015":{"hhw":9,"hhp":9,"hhi":8,"u_hhp":10,"u_hhi":9},"2010":{"hhw":12,"hhp":13,"hhi":10,"u_hhp":14,"u_hhi":11},"2005":{"hhw":13,"hhp":14,"hhi":10,"u_hhp":15,"u_hhi":12},"2000":{"hhw":14,"hhp":14,"hhi":11,"u_hhp":16,"u_hhi":13}},"earliest":"2000-01-01","latest":"2026-03-28","cs_lo":35,"cs_hi":40},{"genre":"Pop","key":"pop","periods":{"all":{"hhw":13,"hhp":15,"hhi":11,"u_hhp":16,"u_hhi":12},"2020":{"hhw":8,"hhp":8,"hhi":7,"u_hhp":8,"u_hhi":7},"2015":{"hhw":9,"hhp":10,"hhi":8,"u_hhp":11,"u_hhi":8},"2010":{"hhw":11,"hhp":13,"hhi":9,"u_hhp":14,"u_hhi":10},"2005":{"hhw":12,"hhp":13,"hhi":10,"u_hhp":15,"u_hhi":11},"2000":{"hhw":13,"hhp":14,"hhi":11,"u_hhp":15,"u_hhi":12}},"earliest":"1992-10-03","latest":"2026-03-28","cs_lo":34,"cs_hi":40},{"genre":"Jazz","key":"jazz","periods":{"all":{"hhw":13,"hhp":15,"hhi":11,"u_hhp":17,"u_hhi":12},"2020":{"hhw":7,"hhp":8,"hhi":7,"u_hhp":8,"u_hhi":7},"2015":{"hhw":11,"hhp":11,"hhi":9,"u_hhp":12,"u_hhi":10},"2010":{"hhw":13,"hhp":13,"hhi":10,"u_hhp":14,"u_hhi":12},"2005":{"hhw":13,"hhp":15,"hhi":11,"u_hhp":17,"u_hhi":12},"2000":{"hhw":13,"hhp":15,"hhi":11,"u_hhp":17,"u_hhi":12}},"earliest":"2005-10-22","latest":"2026-03-28","cs_lo":25,"cs_hi":40},{"genre":"Rock","key":"rock","periods":{"all":{"hhw":12,"hhp":15,"hhi":9,"u_hhp":21,"u_hhi":11},"2020":{"hhw":5,"hhp":8,"hhi":5,"u_hhp":10,"u_hhi":5},"2015":{"hhw":9,"hhp":13,"hhi":7,"u_hhp":19,"u_hhi":9},"2010":{"hhw":11,"hhp":15,"hhi":9,"u_hhp":21,"u_hhi":11},"2005":{"hhw":12,"hhp":15,"hhi":9,"u_hhp":21,"u_hhi":11},"2000":{"hhw":12,"hhp":15,"hhi":9,"u_hhp":21,"u_hhi":11}},"earliest":"2009-06-20","latest":"2026-03-28","cs_lo":13,"cs_hi":50},{"genre":"Adult Contemporary","key":"adult_contemporary","periods":{"all":{"hhw":12,"hhp":11,"hhi":9,"u_hhp":14,"u_hhi":11},"2020":{"hhw":6,"hhp":6,"hhi":4,"u_hhp":6,"u_hhi":5},"2015":{"hhw":7,"hhp":8,"hhi":6,"u_hhp":9,"u_hhi":7},"2010":{"hhw":10,"hhp":10,"hhi":8,"u_hhp":11,"u_hhi":10},"2005":{"hhw":10,"hhp":11,"hhi":8,"u_hhp":12,"u_hhi":10},"2000":{"hhw":12,"hhp":11,"hhi":9,"u_hhp":14,"u_hhi":11}},"earliest":"2000-01-01","latest":"2026-03-28","cs_lo":20,"cs_hi":40},{"genre":"Gospel","key":"gospel","periods":{"all":{"hhw":10,"hhp":9,"hhi":7,"u_hhp":12,"u_hhi":10},"2020":{"hhw":6,"hhp":6,"hhi":5,"u_hhp":7,"u_hhi":5},"2015":{"hhw":8,"hhp":8,"hhi":6,"u_hhp":9,"u_hhi":7},"2010":{"hhw":9,"hhp":8,"hhi":7,"u_hhp":11,"u_hhi":8},"2005":{"hhw":10,"hhp":9,"hhi":7,"u_hhp":12,"u_hhi":10},"2000":{"hhw":10,"hhp":9,"hhi":7,"u_hhp":12,"u_hhi":10}},"earliest":"2005-03-19","latest":"2026-03-28","cs_lo":17,"cs_hi":25},{"genre":"Dance/Electronic","key":"dance_electronic","periods":{"all":{"hhw":7,"hhp":10,"hhi":6,"u_hhp":12,"u_hhi":7},"2020":{"hhw":5,"hhp":8,"hhi":5,"u_hhp":9,"u_hhi":5},"2015":{"hhw":6,"hhp":10,"hhi":6,"u_hhp":12,"u_hhi":6},"2010":{"hhw":7,"hhp":10,"hhi":6,"u_hhp":12,"u_hhi":7},"2005":{"hhw":7,"hhp":10,"hhi":6,"u_hhp":12,"u_hhi":7},"2000":{"hhw":7,"hhp":10,"hhi":6,"u_hhp":12,"u_hhi":7}},"earliest":"2013-01-26","latest":"2026-03-28","cs_lo":15,"cs_hi":50}];
 
 // ── Dark mode ─────────────────────────────────────────────────────────────────
 function applyTheme(theme) {
@@ -391,9 +394,11 @@ function updateGenreTable(period) {
       ? String(Math.max(periodYear, earliestYear))
       : (g.earliest ? g.earliest.slice(0,4) : '?');
     const csLabel = g.cs_hi != null ? String(g.cs_hi) : '?';
+    const hhp_val = hasData ? (_unifiedMode && p?.u_hhp != null ? p.u_hhp : (p?.hhp ?? null)) : null;
+    const hhi_val = hasData ? (_unifiedMode && p?.u_hhi != null ? p.u_hhi : (p?.hhi ?? null)) : null;
     return {genre: g.genre, key: g.key,
-            hhw: hasData ? p.hhw : null, hhp: hasData ? p.hhp : null,
-            hhi: hasData ? (p.hhi ?? null) : null,
+            hhw: hasData ? p?.hhw ?? null : null,
+            hhp: hhp_val, hhi: hhi_val,
             y1, y2: g.latest ? g.latest.slice(0,4) : '?', csLabel};
   });
   const gs = _sortState.genre;
@@ -444,6 +449,7 @@ const _sortState = {
 let _timelineView  = 'hindex';   // 'hindex' | 'velocity'
 let _intSongPos    = {};
 let _timelineSigma = 26;         // weeks
+let _unifiedMode   = false;
 updateGenreTable('all');
 
 // ── Helpers for expanded-artist highlights ────────────────────────────────────
@@ -479,16 +485,20 @@ function createPlot(divId, curves, yLabel, chartSize) {
 
   // Inject highlighted artists that aren't already in the visible top-N curves
   if (highlighted.size && _currentData) {
-    const inCurves   = new Set(curves.map(c => c.artist));
-    const fullData   = divId === 'weeks-plot'      ? _currentData.weeks
-                     : divId === 'integrated-plot' ? _currentData.integrated
-                     : _currentData.peak;
-    const extraCurves= divId === 'weeks-plot'      ? _currentData.weeksCurves
-                     : divId === 'integrated-plot' ? _currentData.integratedCurves
-                     : _currentData.peakCurves;
+    const inCurves = new Set(curves.map(c => c.artist));
+    const isWeeks  = divId === 'weeks-plot';
+    const isInt    = divId === 'integrated-plot';
+    const ud       = !isWeeks && _unifiedMode && _currentData?.u ? _currentData.u : null;
+    const fullData = isWeeks ? _currentData.weeks
+                  : isInt   ? (ud?.integrated ?? _currentData.integrated)
+                  : (ud?.peak ?? _currentData.peak);
+    const extraCurves = isWeeks ? _currentData.weeksCurves
+                     : isInt   ? (ud?.integratedCurves ?? _currentData.integratedCurves)
+                     : (ud?.peakCurves ?? _currentData.peakCurves);
     // combined row: [rank, artist, intH, iYoY, weeksH, wYoY, peakH, pYoY, n]
-    const hIdx       = divId === 'weeks-plot' ? 4 : divId === 'integrated-plot' ? 2 : 6;
-    const combinedMap= new Map((_currentData.combinedTable ?? []).map(r => [r[1], r]));
+    const hIdx       = isWeeks ? 4 : isInt ? 2 : 6;
+    const cTable     = (ud?.combinedTable ?? _currentData.combinedTable) ?? [];
+    const combinedMap= new Map(cTable.map(r => [r[1], r]));
     const extras = [];
     for (const artist of highlighted) {
       if (inCurves.has(artist)) continue;
@@ -1006,7 +1016,8 @@ function filterRows(rows, query) {
 }
 
 function buildCombinedTable() {
-  return _currentData?.combinedTable ?? [];
+  const ud = _unifiedMode && _currentData?.u?.combinedTable ? _currentData.u : null;
+  return (ud ?? _currentData)?.combinedTable ?? [];
 }
 
 function renderTables() {
@@ -1032,19 +1043,24 @@ function loadMore() {
   renderTables();
 }
 
-// ── Redraw plots (e.g. on theme change) ───────────────────────────────────────
+// ── Redraw plots (e.g. on theme change or unified-mode toggle) ────────────────
 function redrawPlots() {
   const n  = parseInt(document.getElementById('n-select').value);
-  const cs = _currentData.chart_size || 100;
-  createPlot('weeks-plot',      _currentData.weeks.slice(0, n), 'Weeks on chart');
-  createPlot('peak-plot',       _currentData.peak.slice(0, n), 'Distance from end of chart', cs);
-  createPlot('integrated-plot', (_currentData.integrated ?? []).slice(0, n), 'Peak-equivalent weeks');
+  const ud = _unifiedMode && _currentData?.u?.peak ? _currentData.u : null;
+  const d  = ud ?? _currentData;
+  _intSongPos = ud?.intSongPos ?? _currentData?.intSongPos ?? {};
+  const cs = d.chart_size || 100;
+  document.getElementById('peak-desc').innerHTML = _unifiedMode
+    ? '<em>h</em> songs with score &ge;&thinsp;<em>h</em> &middot; score&nbsp;=&nbsp;100&thinsp;&minus;&thinsp;peak position &middot; hover for details'
+    : '<em>h</em> songs each at least <em>h</em> spots from the end of the chart &middot; hover for details';
+  createPlot('weeks-plot', _currentData.weeks.slice(0, n), 'Weeks on chart');
+  createPlot('peak-plot', d.peak.slice(0, n), 'Distance from end of chart', cs);
+  createPlot('integrated-plot', (d.integrated ?? []).slice(0, n), 'Peak-equivalent weeks');
 }
 
 // ── Render a full payload ─────────────────────────────────────────────────────
 function renderChart(data) {
   _currentData  = data;
-  _intSongPos   = data.intSongPos ?? {};
   _tableOffset  = TABLE_STEP;
   _expandedArtists.clear();
   _filterQuery.combined = '';
@@ -1054,10 +1070,7 @@ function renderChart(data) {
   const chartLabel = chartSel.options[chartSel.selectedIndex]?.text || '';
   const periodLabel = periodSel.options[periodSel.selectedIndex]?.text || '';
   document.getElementById('chart-heading').textContent = chartLabel + ' · ' + periodLabel;
-  const cs = data.chart_size || 100;
-  document.getElementById('peak-desc').innerHTML =
-    '<em>h</em> songs each at least <em>h</em> spots from the end of the chart &middot; hover for details';
-  redrawPlots();
+  redrawPlots();   // also sets _intSongPos and peak-desc
   renderTables();
   updateGenreTable(document.getElementById('period-select').value);
 }
@@ -1111,6 +1124,11 @@ document.getElementById('chart-select').addEventListener('change', loadChart);
 document.getElementById('period-select').addEventListener('change', () => {
   updateGenreTable(document.getElementById('period-select').value);
   loadChart();
+});
+document.getElementById('unified-cs').addEventListener('change', e => {
+  _unifiedMode = e.target.checked;
+  if (_currentData) { redrawPlots(); renderTables(); }
+  updateGenreTable(document.getElementById('period-select').value);
 });
 document.getElementById('n-select').addEventListener('change', () => {
   if (!_currentData) return;
