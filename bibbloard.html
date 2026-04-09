@@ -90,17 +90,6 @@ h1{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:3rem;le
 .selector-bar .sep{color:var(--border)}
 #loading{font-size:.78rem;color:var(--muted);display:none}
 
-/* ── H-H-Index stat box ───────────────────────────────────────────────────── */
-.hhbox{
-  display:flex;background:var(--surface);
-  border:1px solid var(--border);border-left:4px solid var(--accent);
-  border-radius:4px;margin-bottom:2rem;overflow:hidden;
-}
-.hhstat{padding:1rem 1.8rem;border-right:1px solid var(--border-lt)}
-.hhstat .val{font-size:2rem;font-weight:bold;line-height:1;color:var(--text)}
-.hhstat .lbl{font-size:.74rem;color:var(--muted);margin-top:.22rem}
-.hhdesc{padding:1rem 1.4rem;font-size:.8rem;color:var(--muted);align-self:center;line-height:1.65;flex:1}
-.hhdesc strong{color:var(--text)}
 
 /* ── Plots ────────────────────────────────────────────────────────────────── */
 .plots{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:1.5rem;margin-bottom:2rem}
@@ -182,7 +171,7 @@ footer strong{color:var(--text)}
 
 @media(max-width:860px){
   .plots,.tables{grid-template-columns:1fr}
-  .hhbox{flex-wrap:wrap}
+
 }
 @media(max-width:600px){
   .wrap{padding:1.2rem .75rem 3rem}
@@ -277,21 +266,7 @@ footer strong{color:var(--text)}
     <span id="loading">Loading&hellip;</span>
   </div>
 
-  <!-- H-H-Index stats (updated per selection) -->
-  <div class="hhbox">
-    <div class="hhstat">
-      <div class="val" id="hhw-val">&mdash;</div>
-      <div class="lbl">Weeks h-h-index</div>
-    </div>
-    <div class="hhstat">
-      <div class="val" id="hhp-val">&mdash;</div>
-      <div class="lbl">Peak h-h-index</div>
-    </div>
-    <div class="hhdesc">
-      The <strong>h-h-index</strong> is the h-index of h-indices &mdash;
-      the largest <em>h</em> such that <em>h</em> artists each have an h-index &ge; <em>h</em>.
-    </div>
-  </div>
+  <h2 id="chart-heading" style="font-size:1.15rem;font-weight:600;margin-bottom:1.2rem;color:var(--text)"></h2>
 
   <!-- Plots -->
   <div class="plots">
@@ -939,8 +914,11 @@ function renderChart(data) {
   _filterQuery.weeks = ''; _filterQuery.peak = '';
   document.getElementById('weeks-filter').value = '';
   document.getElementById('peak-filter').value  = '';
-  document.getElementById('hhw-val').textContent = data.hhw;
-  document.getElementById('hhp-val').textContent = data.hhp;
+  const chartSel  = document.getElementById('chart-select');
+  const periodSel = document.getElementById('period-select');
+  const chartLabel = chartSel.options[chartSel.selectedIndex]?.text || '';
+  const periodLabel = periodSel.options[periodSel.selectedIndex]?.text || '';
+  document.getElementById('chart-heading').textContent = chartLabel + ' · ' + periodLabel;
   const cs = data.chart_size || 100;
   document.getElementById('peak-desc').innerHTML =
     '<em>h</em> songs have chart score &ge;&thinsp;<em>h</em> &middot; score&nbsp;=&nbsp;' +
