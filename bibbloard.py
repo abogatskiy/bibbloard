@@ -386,6 +386,7 @@ def compute_artist_timelines(artists: list, rows: list, metric: str,
         song_score: dict = {}                 # song -> best peak_score so far
         change_dates: list = []
         change_h:     list = []
+        change_songs: list = []
         prev_h = -1
 
         for r in artist_rows:
@@ -413,10 +414,11 @@ def compute_artist_timelines(artists: list, rows: list, metric: str,
             if h != prev_h:
                 change_dates.append(r["date"])
                 change_h.append(h)
+                change_songs.append(song)
                 prev_h = h
 
         if change_dates:
-            result[artist] = {"d": change_dates, "h": change_h}
+            result[artist] = {"d": change_dates, "h": change_h, "s": change_songs}
         if tick:
             tick(artist)
 
