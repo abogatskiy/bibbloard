@@ -9,8 +9,9 @@ H-Index definitions (by analogy with the academic h-index):
   - Weeks h-index      : artist has h songs each appearing on the chart for ≥ h weeks
   - Peak h-index       : artist has h songs each with chart score ≥ h
                          (chart score = chart_size − peak_position, so Hot 100 #1 → 99)
-  - Integrated h-index : artist has h songs each with cumulative chart score ≥ h
-                         (sum of chart_size − peak_position across all charting weeks)
+  - Integrated h-index : artist has h songs each with ≥ h peak-equivalent weeks on chart
+                         (sum of (chart_size − position)/chart_size per charting week;
+                          normalised per week so chart size changes don't distort scores)
 
 Data sources:
   Hot 100:  https://github.com/mhollingshead/billboard-hot-100
@@ -284,13 +285,14 @@ def deduplicate_rows(rows: list, since: str = None, until: str = None,
         cs    = chart_sizes.get(r["date"], 0) if chart_sizes else 0
         score = max(cs - peak, 0)
         key   = (r["artist"], r["song"])
+        norm = score / cs if cs > 0 else 0  # normalized: (cs−pos)/cs per week
         if key not in raw:
-            raw[key] = [1, score, score, r["date"]]
+            raw[key] = [1, score, norm, r["date"]]
         else:
             raw[key][0] += 1
             if score > raw[key][1]:
                 raw[key][1] = score  # keep best (highest) peak score
-            raw[key][2] += score     # accumulate integrated score
+            raw[key][2] += norm      # accumulate normalized integrated score
 
     artist_songs = defaultdict(list)
     for (artist, song), (weeks, peak_score, integrated_score, first_date) in raw.items():
@@ -420,7 +422,7 @@ def compute_artist_timelines(artists: list, rows: list, metric: str,
                 cs    = chart_sizes.get(r["date"], 0) if chart_sizes else 0
                 pk    = r.get("peak", 0)
                 score = max(cs - pk, 0) if isinstance(pk, int) and 0 < pk <= cs else 0
-                song_iscore[song] += score
+                song_iscore[song] += score / cs if cs > 0 else 0
                 scores = sorted(song_iscore.values(), reverse=True)
                 h = 0
                 for i, s in enumerate(scores, 1):

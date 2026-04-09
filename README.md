@@ -10,7 +10,7 @@ By analogy with the [academic h-index](https://en.wikipedia.org/wiki/H-index):
 
 - **Weeks h-index** — an artist has h-index *h* if they have at least *h* songs that each appeared on the chart for at least *h* weeks
 - **Peak h-index** — an artist has h-index *h* if they have at least *h* songs each at least *h* spots from the end of the chart (i.e. chart size − peak position ≥ *h*, so a Hot 100 #1 scores 99)
-- **Integrated h-index** — an artist has h-index *h* if they have at least *h* songs each with a cumulative chart score ≥ *h* (sum of chart size − peak position across all charting weeks)
+- **Integrated h-index** — an artist has h-index *h* if they have at least *h* songs each with ≥ *h* peak-equivalent weeks on chart (each charting week contributes `(chart_size − position) / chart_size`, so #1 ≈ 1.0/week; normalised so chart size changes over time don't distort scores)
 
 All three metrics reward breadth *and* depth: you need many charting songs, and each one has to hold up. The integrated variant additionally rewards longevity — a song that stays near the top for many weeks accumulates a much higher score than one that peaks and disappears.
 
