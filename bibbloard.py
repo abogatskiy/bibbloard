@@ -324,13 +324,22 @@ def hindex_peak(songs: list) -> int:
         else: break
     return h
 
-def hindex_integrated(songs: list) -> int:
-    """Largest h s.t. h songs have integrated_score ≥ h."""
+def hindex_integrated(songs: list) -> float:
+    """Real-valued h s.t. h songs have integrated_score ≥ h.
+    Integer part: standard h-index on float scores.
+    Fractional part: linear interpolation of where the score curve crosses y=x,
+    i.e. h += excess / (excess + deficit) where excess = score[h] − h and
+    deficit = (h+1) − score[h+1].  Equivalent to the bibliometric h-fraction."""
     scores = sorted((s["integrated_score"] for s in songs), reverse=True)
     h = 0
     for i, s in enumerate(scores, start=1):
-        if s >= i: h = i
-        else: break
+        if s >= i:
+            h = i
+        else:
+            if h > 0:
+                s_h = scores[h - 1]          # score of the last qualifying song
+                h += (s_h - h) / (s_h - s + 1)  # interpolate to diagonal crossing
+            break
     return h
 
 def compute_chart_size(chart_sizes: dict, since: str = None) -> int:
@@ -476,16 +485,21 @@ def print_ranking(title: str, ranking, top_n: int):
     for rank, (artist, h, n) in enumerate(ranking[:top_n], 1):
         print(f"  {rank:>4}  {h:>4}  {n:>6}  {artist}")
 
-def save_csv(filename, ranking, header_h: str):
-    """Write CSV atomically."""
+def save_csv(filename, weeks_ranking, peak_ranking, int_ranking):
+    """Write unified CSV with all three h-indices, atomically."""
     path = Path(filename)
     tmp  = path.with_suffix(".tmp")
+    # Build artist → (h, n) maps for peak and integrated
+    peak_map = {artist: (h, n) for artist, h, n in peak_ranking}
+    int_map  = {artist: (h, n) for artist, h, n in int_ranking}
     try:
         with open(tmp, "w", encoding="utf-8") as f:
-            f.write(f"rank,{header_h},total_songs,artist\n")
-            for rank, (artist, h, n) in enumerate(ranking, 1):
-                safe = artist.replace('"', '""')
-                f.write(f'{rank},{h},{n},"{safe}"\n')
+            f.write("rank,weeks_hindex,peak_hindex,integrated_hindex,total_songs,artist\n")
+            for rank, (artist, wh, n) in enumerate(weeks_ranking, 1):
+                ph, _ = peak_map.get(artist, (0, n))
+                ih, _ = int_map.get(artist, (0, n))
+                safe  = artist.replace('"', '""')
+                f.write(f'{rank},{wh},{ph},{ih:.2f},{n},"{safe}"\n')
         os.replace(tmp, path)
     except:
         tmp.unlink(missing_ok=True)
@@ -711,8 +725,7 @@ def main():
     hot100_size            = compute_chart_size(hot100_chart_sizes)
     wr_all, pr_all, ir_all = compute_rankings(hot100_all)
     OUTPUT_DIR.mkdir(exist_ok=True)
-    save_csv(OUTPUT_DIR / "bibbloard_weeks.csv", wr_all, "weeks_hindex")
-    save_csv(OUTPUT_DIR / "bibbloard_peak.csv",  pr_all, "peak_hindex")
+    save_csv(OUTPUT_DIR / "bibbloard_hindex.csv", wr_all, pr_all, ir_all)
 
     # ── Pre-count total timeline-artist ticks for accurate ETA ───────────────
     total_ticks = 0

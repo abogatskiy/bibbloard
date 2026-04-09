@@ -217,12 +217,12 @@ footer strong{color:var(--text)}
   <div class="section-title">Genre H-H-Index Ranking</div>
   <div class="tables" style="margin-bottom:2rem">
     <div class="tbl-card">
-      <table><thead><tr>
+      <table><thead><tr id="genre-thead-row">
         <th style="width:2rem" class="tr">#</th>
-        <th>Billboard chart</th>
-        <th style="width:5rem" class="tr">Weeks H-H</th>
-        <th style="width:5rem" class="tr">Peak H-H</th>
-        <th style="width:4.5rem" class="tr">Int H-H</th>
+        <th class="sortable" data-table="genre" data-col="genre">Billboard chart</th>
+        <th style="width:5rem" class="tr sortable" data-table="genre" data-col="hhw">Weeks H-H</th>
+        <th style="width:5rem" class="tr sortable" data-table="genre" data-col="hhp">Peak H-H</th>
+        <th style="width:4.5rem" class="tr sortable" data-table="genre" data-col="hhi">Int H-H</th>
       </tr></thead><tbody id="genre-tbody"></tbody></table>
     </div>
     <div class="tbl-card" style="font-size:.8rem;color:var(--muted);padding:1rem 1.2rem;line-height:1.75">
@@ -383,7 +383,15 @@ function updateGenreTable(period) {
             hhw: hasData ? p.hhw : null, hhp: hasData ? p.hhp : null,
             hhi: hasData ? (p.hhi ?? null) : null,
             y1, y2: g.latest ? g.latest.slice(0,4) : '?'};
-  }).sort((a, b) => (b.hhw ?? -1) - (a.hhw ?? -1) || (b.hhp ?? -1) - (a.hhp ?? -1) || (b.hhi ?? -1) - (a.hhi ?? -1));
+  const gs = _sortState.genre;
+  rows.sort((a, b) => {
+    if (gs.col === 'genre') {
+      const c = a.genre.localeCompare(b.genre);
+      return gs.asc ? c : -c;
+    }
+    const av = a[gs.col] ?? -1, bv = b[gs.col] ?? -1;
+    return gs.asc ? av - bv : bv - av;
+  });
 
   const tbody = document.getElementById('genre-tbody');
   tbody.innerHTML = '';
@@ -398,6 +406,7 @@ function updateGenreTable(period) {
       `<td>${g.genre}<span class="dim" style="font-size:.8rem"> (${g.y1}\u2013${g.y2})</span></td>` +
       `<td class="tr">${hhw}</td><td class="tr">${hhp}</td><td class="tr">${hhi}</td></tr>`);
   });
+  updateSortHeaders('genre');
 }
 updateGenreTable('all');
 
@@ -416,7 +425,8 @@ const COLORS = [
 const _expandedArtists = new Set();
 const _filterQuery = { combined: '' };
 const _sortState = {
-  combined: { col: 'weeksH', asc: false }
+  combined: { col: 'weeksH', asc: false },
+  genre:    { col: 'hhw',    asc: false }
 };
 let _timelineView  = 'hindex';   // 'hindex' | 'velocity'
 let _timelineSigma = 26;         // weeks
@@ -774,7 +784,7 @@ function fillTableRows(id, rows, tableKey) {
       `<td class="tr dim">${i + 1}</td>` +
       `<td class="tr bld">${weeksH}</td>` +
       `<td class="tr bld">${peakH}</td>` +
-      `<td class="tr bld">${intH}</td>` +
+      `<td class="tr bld">${(+intH).toFixed(1)}</td>` +
       `<td class="tr dim">${n}</td>` +
       velHtml +
       `<td><span class="artist-link" data-artist="${escHtml(artist)}" data-table="${tableKey}">${escHtml(artist)}</span></td>` +
@@ -956,10 +966,15 @@ document.querySelectorAll('thead th.sortable').forEach(th => {
       state.asc = !state.asc;
     } else {
       state.col = col;
-      state.asc = col === 'artist';
-      if (col === 'weeksH' || col === 'peakH' || col === 'intH' || col === 'n' || col === 'velocity') state.asc = false;
+      state.asc = (col === 'artist' || col === 'genre');
+      if (col === 'weeksH' || col === 'peakH' || col === 'intH' || col === 'n' || col === 'velocity'
+          || col === 'hhw' || col === 'hhp' || col === 'hhi') state.asc = false;
     }
-    if (_currentData) renderTables();
+    if (tableKey === 'genre') {
+      updateGenreTable(document.getElementById('period-select').value);
+    } else if (_currentData) {
+      renderTables();
+    }
   });
 });
 
