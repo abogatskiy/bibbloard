@@ -339,6 +339,7 @@ footer{
       </div>
       <table><thead><tr id="combined-thead-row">
         <th style="width:2rem" class="tr">#</th>
+        <th>Artist</th>
         <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="intH" title="Integrated h-index">Int H</th>
         <th style="width:3.2rem" class="tr sortable" data-table="combined" data-col="iYoY" title="Year-over-year change in integrated h-index">YoY</th>
         <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="weeksH" title="Weeks h-index">Wks H</th>
@@ -346,7 +347,6 @@ footer{
         <th style="width:2.8rem" class="tr sortable" data-table="combined" data-col="peakH" title="Peak h-index">Pk H</th>
         <th style="width:3.2rem" class="tr sortable" data-table="combined" data-col="pYoY" title="Year-over-year change in peak h-index">YoY</th>
         <th style="width:3.2rem" class="tr sortable" data-table="combined" data-col="n">Songs</th>
-        <th>Artist</th>
       </tr></thead><tbody id="combined-tbody"></tbody></table>
     </div>
   </div>
@@ -957,6 +957,7 @@ function fillTableRows(id, rows, tableKey) {
     tbody.insertAdjacentHTML('beforeend',
       `<tr data-artist="${escHtml(artist)}" data-table="${tableKey}">` +
       `<td class="tr dim">${i + 1}</td>` +
+      `<td><span class="artist-link" data-artist="${escHtml(artist)}" data-table="${tableKey}">${escHtml(artist)}</span></td>` +
       `<td class="tr bld">${(+intH).toFixed(1)}</td>` +
       yoyHtml(iYoY, true) +
       `<td class="tr bld">${weeksH}</td>` +
@@ -964,7 +965,6 @@ function fillTableRows(id, rows, tableKey) {
       `<td class="tr bld">${peakH}</td>` +
       yoyHtml(pYoY, false) +
       `<td class="tr dim">${n}</td>` +
-      `<td><span class="artist-link" data-artist="${escHtml(artist)}" data-table="${tableKey}">${escHtml(artist)}</span></td>` +
       `</tr>`);
     if (isExpanded) {
       const uid   = 'tl-' + tableKey + '-' + encodeURIComponent(artist);
