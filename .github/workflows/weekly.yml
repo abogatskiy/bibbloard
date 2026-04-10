@@ -59,9 +59,7 @@ jobs:
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-          tags: tag:github-actions
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
       # Pull new image on Pi and restart the container
       - name: Deploy to Pi
