@@ -140,7 +140,15 @@ thead th{
   white-space:nowrap;
 }
 tbody td{padding:.25rem .6rem;border-bottom:1px solid var(--border-lt);vertical-align:middle;color:var(--text)}
+tbody tr:nth-child(even){background:var(--bg)}
 tbody tr:hover{background:var(--hover)}
+/* Vertical group separators after each YoY column in combined table */
+#combined-thead-row th:nth-child(4),
+#combined-thead-row th:nth-child(6),
+#combined-thead-row th:nth-child(8),
+#combined-tbody td:nth-child(4),
+#combined-tbody td:nth-child(6),
+#combined-tbody td:nth-child(8){border-right:1px solid var(--border)}
 .tr{text-align:right}.dim{color:var(--muted)}.bld{font-weight:bold}
 
 /* Active genre row highlight */
