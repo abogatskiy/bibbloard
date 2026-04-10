@@ -255,9 +255,9 @@ footer{
         <th style="width:2rem" class="tr">#</th>
         <th class="sortable" data-table="genre" data-col="genre">Billboard chart</th>
         <th style="width:4.5rem" class="tr" title="Chart size (number of entries per week)">Size</th>
+        <th style="width:4.5rem" class="tr sortable" data-table="genre" data-col="hhi">Int H-H</th>
         <th style="width:5rem" class="tr sortable" data-table="genre" data-col="hhw">Weeks H-H</th>
         <th style="width:5rem" class="tr sortable" data-table="genre" data-col="hhp">Peak H-H</th>
-        <th style="width:4.5rem" class="tr sortable" data-table="genre" data-col="hhi">Int H-H</th>
       </tr></thead><tbody id="genre-tbody"></tbody></table>
     </div>
     <div class="tbl-card" style="font-size:.8rem;color:var(--muted);padding:1rem 1.2rem;line-height:1.75">
@@ -459,7 +459,7 @@ function updateGenreTable(period) {
       `<td class="tr dim">${i+1}</td>` +
       `<td>${g.genre}<span class="dim" style="font-size:.8rem"> (${g.y1}\u2013${g.y2})</span></td>` +
       `<td class="tr dim">${g.csLabel}</td>` +
-      `<td class="tr">${hhw}</td><td class="tr">${hhp}</td><td class="tr">${hhi}</td></tr>`);
+      `<td class="tr">${hhi}</td><td class="tr">${hhw}</td><td class="tr">${hhp}</td></tr>`);
   });
   updateSortHeaders('genre');
 }
