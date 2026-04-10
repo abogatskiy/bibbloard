@@ -678,12 +678,12 @@ function createPlot(divId, curves, yLabel, chartSize) {
   if (divId === 'integrated-plot') {
     const popup  = document.getElementById('song-popup');
     const plotEl = document.getElementById(divId);
-    plotEl.on('plotly_hover', evData => {
-      const pt       = evData.points[0];
+
+    function showIntPopup(evData) {
+      const pt = evData.points[0];
       const isMarker = pt.data.mode === 'markers';
       let html = '';
       if (isMarker) {
-        // H-index marker: show artist(s) + h-index from encoded customdata
         const meta = pt.data.customdata?.[pt.pointIndex] ?? '';
         if (!meta) { popup.style.display = 'none'; return; }
         meta.split('\n').forEach(row => {
@@ -692,7 +692,6 @@ function createPlot(divId, curves, yLabel, chartSize) {
                   ` <span style="font-size:.75rem;color:var(--muted)">h&#8209;index&nbsp;${h}</span></div>`;
         });
       } else {
-        // Song curve: show artist, song, score, mini-chart
         const cd       = pt.data.customdata?.[pt.pointIndex];
         const songName = cd?.[0] ?? '';
         const year     = cd?.[1] ?? '';
@@ -707,12 +706,12 @@ function createPlot(divId, curves, yLabel, chartSize) {
         html += `<div style="font-size:.7rem;color:var(--muted);margin-bottom:${details ? 4 : 0}px">#${pt.x} &middot; peak-equiv&nbsp;wks:&nbsp;${score}</div>`;
         if (details) html += songMiniSvg(details, color);
       }
-
       popup.innerHTML = html;
       popup.style.display = 'block';
-      const ev = evData.event, vw = window.innerWidth, vh = window.innerHeight;
-      const cx = ev.clientX ?? ev.changedTouches?.[0]?.clientX ?? ev.touches?.[0]?.clientX ?? vw / 2;
-      const cy = ev.clientY ?? ev.changedTouches?.[0]?.clientY ?? ev.touches?.[0]?.clientY ?? vh / 2;
+      const ev = evData.event;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const cx = ev?.clientX ?? ev?.changedTouches?.[0]?.clientX ?? ev?.touches?.[0]?.clientX ?? vw / 2;
+      const cy = ev?.clientY ?? ev?.changedTouches?.[0]?.clientY ?? ev?.touches?.[0]?.clientY ?? vh / 2;
       let lx = cx + 14, ty = cy - 50;
       if (lx + 190 > vw) lx = cx - 194;
       if (ty < 4) ty = 4;
@@ -720,7 +719,10 @@ function createPlot(divId, curves, yLabel, chartSize) {
       if (ty + popH > vh) ty = vh - popH - 4;
       popup.style.left = lx + 'px';
       popup.style.top  = ty + 'px';
-    });
+    }
+
+    plotEl.on('plotly_hover', showIntPopup);
+    plotEl.on('plotly_click', showIntPopup);  // reliable on mobile touch
     plotEl.on('plotly_unhover', () => { popup.style.display = 'none'; });
   }
 }
@@ -1203,6 +1205,13 @@ document.getElementById('n-select').addEventListener('change', () => {
 loadChart();
 
 // ── Sticky header shadow on scroll ───────────────────────────────────────────
+// Dismiss song popup when tapping outside it on mobile
+document.addEventListener('touchstart', e => {
+  const popup = document.getElementById('song-popup');
+  if (popup.style.display !== 'none' && !popup.contains(e.target))
+    popup.style.display = 'none';
+}, {passive: true});
+
 window.addEventListener('scroll', () => {
   document.querySelector('.sticky-header')?.classList.toggle('scrolled', window.scrollY > 8);
 }, {passive: true});
