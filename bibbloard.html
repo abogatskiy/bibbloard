@@ -722,7 +722,6 @@ function createPlot(divId, curves, yLabel, chartSize) {
     }
 
     plotEl.on('plotly_hover', showIntPopup);
-    plotEl.on('plotly_click', showIntPopup);  // reliable on mobile touch
     plotEl.on('plotly_unhover', () => { popup.style.display = 'none'; });
   }
 }
