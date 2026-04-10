@@ -468,19 +468,12 @@ function updateGenreTable(period) {
 let _currentData  = null;
 let _tableOffset  = 50;
 const TABLE_STEP  = 50;
-const COLORS = [
-  '#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f',
-  '#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac',
-  '#1f77b4','#aec7e8','#ffbb78','#2ca02c','#98df8a',
-  '#d62728','#ff9896','#9467bd','#c5b0d5','#8c564b',
-  '#c49c94','#e377c2','#f7b6d2','#7f7f7f','#c7c7c7',
-  '#bcbd22','#dbdb8d','#17becf','#9edae5','#393b79',
-];
-// ── Stable per-artist color (consistent across all three plots) ───────────────
+// ── Stable per-artist color — golden-angle hue distribution, always saturated ─
 function artistColor(name) {
   let h = 5381;
   for (let i = 0; i < name.length; i++) h = Math.imul(h, 33) ^ name.charCodeAt(i);
-  return COLORS[(h >>> 0) % COLORS.length];
+  const hue = Math.round(((h >>> 0) * 137.508) % 360);
+  return `hsl(${hue},70%,58%)`;
 }
 
 const _expandedArtists = new Set();
