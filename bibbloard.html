@@ -935,11 +935,13 @@ const COL_IDX = { artist: 1, intH: 2, iYoY: 3, weeksH: 4, wYoY: 5, peakH: 6, pYo
 
 function sortedRows(rows, state) {
   const idx = COL_IDX[state.col] ?? 0;
+  const intIdx = COL_IDX.intH; // tiebreaker: integrated h-index, always descending
   const asc = state.asc ? 1 : -1;
   return [...rows].sort((a, b) => {
     const av = a[idx], bv = b[idx];
-    if (typeof av === 'string') return asc * av.localeCompare(bv);
-    return asc * ((av ?? 0) - (bv ?? 0));
+    const primary = typeof av === 'string' ? asc * av.localeCompare(bv) : asc * ((av ?? 0) - (bv ?? 0));
+    if (primary !== 0) return primary;
+    return (b[intIdx] ?? 0) - (a[intIdx] ?? 0); // tiebreak descending by intH
   });
 }
 
