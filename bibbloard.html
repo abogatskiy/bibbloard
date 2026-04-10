@@ -711,8 +711,10 @@ function createPlot(divId, curves, yLabel, chartSize) {
       popup.innerHTML = html;
       popup.style.display = 'block';
       const ev = evData.event, vw = window.innerWidth, vh = window.innerHeight;
-      let lx = ev.clientX + 14, ty = ev.clientY - 50;
-      if (lx + 190 > vw) lx = ev.clientX - 194;
+      const cx = ev.clientX ?? ev.changedTouches?.[0]?.clientX ?? ev.touches?.[0]?.clientX ?? vw / 2;
+      const cy = ev.clientY ?? ev.changedTouches?.[0]?.clientY ?? ev.touches?.[0]?.clientY ?? vh / 2;
+      let lx = cx + 14, ty = cy - 50;
+      if (lx + 190 > vw) lx = cx - 194;
       if (ty < 4) ty = 4;
       const popH = popup.offsetHeight || 140;
       if (ty + popH > vh) ty = vh - popH - 4;
