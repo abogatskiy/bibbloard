@@ -1,0 +1,80 @@
+name: Weekly data refresh
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'   # Every Monday at 08:00 UTC
+  workflow_dispatch:        # Manual trigger from GitHub Actions UI
+
+jobs:
+  refresh-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      # Cache the large raw data files so re-runs skip re-downloading
+      - name: Restore raw data cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            all.json
+            data/*.csv
+          key: billboard-raw-${{ hashFiles('bibbloard.py') }}-${{ github.run_id }}
+          restore-keys: billboard-raw-${{ hashFiles('bibbloard.py') }}-
+
+      - name: Regenerate JSON data
+        run: python3 bibbloard.py
+
+      # Build multi-platform ARM64 image and push to GHCR
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: abogatskiy
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push ARM64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ghcr.io/abogatskiy/billboard-web:latest
+
+      # Connect to Tailscale so we can reach the Pi
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:github-actions
+
+      # Pull new image on Pi and restart the container
+      - name: Deploy to Pi
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 100.94.40.119
+          username: alex
+          key: ${{ secrets.PI_SSH_KEY }}
+          script: |
+            docker pull ghcr.io/abogatskiy/billboard-web:latest
+            docker stop billboard-web 2>/dev/null || true
+            docker rm   billboard-web 2>/dev/null || true
+            docker run -d --name billboard-web \
+              --network nginx_proxy-network \
+              --restart unless-stopped \
+              ghcr.io/abogatskiy/billboard-web:latest
