@@ -164,6 +164,12 @@ thead th.sort-desc::after{content:' ▼';font-size:.6rem;color:var(--accent);opa
 .vel-zero{color:var(--muted);font-size:.8rem}
 .vel-pos{font-weight:bold}
 
+/* ── Recent-gain arrow ────────────────────────────────────────────────────── */
+.recent-gain{
+  color:#c0392b;font-size:.78em;margin-left:.18em;
+  cursor:default;vertical-align:.06em;
+}
+
 /* ── Expandable artist timeline row ──────────────────────────────────────── */
 .artist-link{cursor:pointer;text-decoration:none;color:inherit;border-bottom:1px dotted var(--muted)}
 .artist-link:hover{color:var(--accent);border-bottom-color:var(--accent)}
@@ -960,6 +966,34 @@ function updateSortHeaders(tableKey) {
   });
 }
 
+// ── Recent-gain helpers ───────────────────────────────────────────────────────
+// Return the step-function h-index value at dateStr (YYYY-MM-DD).
+function getHAtDate(series, dateStr) {
+  if (!series || !series.d || !series.d.length) return 0;
+  let val = 0;
+  for (let i = 0; i < series.d.length; i++) {
+    if (series.d[i] <= dateStr) val = series.h[i];
+    else break;
+  }
+  return val;
+}
+
+// Return a ↗ span if the h-index increased in the last 28 days; '' otherwise.
+function recentGainArrow(series, latestDate, isFrac) {
+  if (!series || !series.d || !series.d.length || !latestDate) return '';
+  const latest = new Date(latestDate);
+  const ago = new Date(latest);
+  ago.setDate(ago.getDate() - 28);
+  const agoStr = ago.toISOString().slice(0, 10);
+  const current = series.h[series.h.length - 1];
+  const before  = getHAtDate(series, agoStr);
+  const diff = current - before;
+  if (diff <= 0) return '';
+  const diffStr = parseFloat(diff.toPrecision(2));
+  const tip = `Increased by ${diffStr} in the last month`;
+  return `<span class="recent-gain" title="${tip}">\u2197</span>`;
+}
+
 // ── Table rendering ───────────────────────────────────────────────────────────
 function fillTableRows(id, rows, tableKey) {
   const tbody = document.getElementById(id);
@@ -973,15 +1007,20 @@ function fillTableRows(id, rows, tableKey) {
       return `<td class="tr vel-pos" style="color:${c}">+${s}</td>`;
     }
     const isExpanded = _expandedArtists.has(artist + '|' + tableKey);
+    const tl = _currentData?.timelines?.[artist];
+    const ld = _currentData?.latest_date;
+    const iArrow = recentGainArrow(tl?.i, ld, true);
+    const wArrow = recentGainArrow(tl?.w, ld, false);
+    const pArrow = recentGainArrow(tl?.p, ld, false);
     tbody.insertAdjacentHTML('beforeend',
       `<tr data-artist="${escHtml(artist)}" data-table="${tableKey}">` +
       `<td class="tr dim">${i + 1}</td>` +
       `<td><span class="artist-link" data-artist="${escHtml(artist)}" data-table="${tableKey}">${escHtml(artist)}</span></td>` +
-      `<td class="tr bld">${(+intH).toFixed(1)}</td>` +
+      `<td class="tr bld">${(+intH).toFixed(1)}${iArrow}</td>` +
       yoyHtml(iYoY, true) +
-      `<td class="tr bld">${weeksH}</td>` +
+      `<td class="tr bld">${weeksH}${wArrow}</td>` +
       yoyHtml(wYoY, false) +
-      `<td class="tr bld">${peakH}</td>` +
+      `<td class="tr bld">${peakH}${pArrow}</td>` +
       yoyHtml(pYoY, false) +
       `<td class="tr dim">${n}</td>` +
       `</tr>`);
