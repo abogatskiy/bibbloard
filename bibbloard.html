@@ -106,6 +106,12 @@ h1{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:3rem;le
 #song-popup{display:none;position:fixed;z-index:999;background:var(--surface);
   border:1px solid var(--border);border-radius:4px;padding:6px 8px;
   pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);min-width:168px}
+
+/* ── Recent-gain popup ───────────────────────────────────────────────────── */
+#gain-popup{display:none;position:fixed;z-index:999;background:var(--surface);
+  border:1px solid var(--border);border-radius:4px;padding:7px 10px;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);max-width:210px;
+  font-size:.78rem;line-height:1.5;pointer-events:none}
 #integrated-plot .hovertext{display:none!important}
 
 /* ── Timeline: let Plotly tooltip overflow all containers and stack above rows */
@@ -386,6 +392,7 @@ footer{
 
 </div>
 <div id="song-popup"></div>
+<div id="gain-popup"></div>
 
 <script>
 // ── Genre summary (inlined — small data) ─────────────────────────────────────
@@ -982,9 +989,9 @@ function getHAtDate(series, dateStr) {
   return val;
 }
 
-// Return a ↗ span if the h-index increased in the last 28 days; '' otherwise.
-function recentGainArrow(series, latestDate, isFrac) {
-  if (!series || !series.d || !series.d.length || !latestDate) return '';
+// Compute recent gain for a timeline series; returns {diff, songs} or null.
+function recentGain(series, latestDate) {
+  if (!series || !series.d || !series.d.length || !latestDate) return null;
   const latest = new Date(latestDate);
   const ago = new Date(latest);
   ago.setDate(ago.getDate() - 28);
@@ -992,11 +999,45 @@ function recentGainArrow(series, latestDate, isFrac) {
   const current = series.h[series.h.length - 1];
   const before  = getHAtDate(series, agoStr);
   const diff = current - before;
-  if (diff <= 0) return '';
-  const diffStr = parseFloat(diff.toPrecision(2));
-  const tip = `Increased by ${diffStr} in the last month`;
-  return `<span class="recent-gain" title="${tip}">\u2197\uFE0E</span>`;
+  if (diff <= 0) return null;
+  const seen = new Set(), songs = [];
+  for (let i = 0; i < series.d.length; i++) {
+    if (series.d[i] > agoStr && series.s?.[i]) {
+      for (const s of series.s[i]) { if (!seen.has(s)) { seen.add(s); songs.push(s); } }
+    }
+  }
+  return { diff, songs };
 }
+
+// Build the ↗ span; label e.g. 'Integrated h'.
+function gainArrowHtml(gain, label) {
+  if (!gain) return '';
+  const diffStr = parseFloat(gain.diff.toPrecision(2));
+  const payload = escHtml(JSON.stringify({ d: diffStr, l: label, s: gain.songs }));
+  return `<span class="recent-gain" data-gain="${payload}">\u2197\uFE0E</span>`;
+}
+
+// Show/hide the gain popup near element el.
+function showGainPopup(el, clientX, clientY) {
+  const data = JSON.parse(el.dataset.gain);
+  const popup = document.getElementById('gain-popup');
+  let html = `<div style="font-weight:600;color:var(--text);margin-bottom:.15rem">${data.l}-index +${data.d} this month</div>`;
+  if (data.s && data.s.length)
+    html += data.s.map(s => `<div style="color:var(--muted);font-size:.74rem"><i>${escHtml(s)}</i></div>`).join('');
+  popup.innerHTML = html;
+  popup.style.display = 'block';
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const rect = el.getBoundingClientRect();
+  const cx = clientX ?? rect.right, cy = clientY ?? rect.top;
+  const pw = popup.offsetWidth || 200, ph = popup.offsetHeight || 80;
+  let lx = cx + 10, ty = cy - 4;
+  if (lx + pw > vw - 4) lx = cx - pw - 10;
+  if (ty + ph > vh - 4) ty = vh - ph - 4;
+  if (ty < 4) ty = 4;
+  popup.style.left = lx + 'px';
+  popup.style.top  = ty + 'px';
+}
+function hideGainPopup() { document.getElementById('gain-popup').style.display = 'none'; }
 
 // ── Table rendering ───────────────────────────────────────────────────────────
 function fillTableRows(id, rows, tableKey) {
@@ -1013,9 +1054,9 @@ function fillTableRows(id, rows, tableKey) {
     const isExpanded = _expandedArtists.has(artist + '|' + tableKey);
     const tl = _currentData?.timelines?.[artist];
     const ld = _currentData?.latest_date;
-    const iArrow = recentGainArrow(tl?.i, ld, true);
-    const wArrow = recentGainArrow(tl?.w, ld, false);
-    const pArrow = recentGainArrow(tl?.p, ld, false);
+    const iArrow = gainArrowHtml(recentGain(tl?.i, ld), 'Integrated h');
+    const wArrow = gainArrowHtml(recentGain(tl?.w, ld), 'Weeks h');
+    const pArrow = gainArrowHtml(recentGain(tl?.p, ld), 'Peak h');
     tbody.insertAdjacentHTML('beforeend',
       `<tr data-artist="${escHtml(artist)}" data-table="${tableKey}">` +
       `<td class="tr dim">${i + 1}</td>` +
@@ -1070,6 +1111,17 @@ function toggleArtistTimeline(artist, tableKey) {
 
 // Event delegation for artist links (handles names with quotes/special chars)
 document.addEventListener('click', e => {
+  const gainArrow = e.target.closest('.recent-gain');
+  if (gainArrow) {
+    e.stopPropagation();
+    const popup = document.getElementById('gain-popup');
+    if (popup.style.display !== 'none' && popup._src === gainArrow) { hideGainPopup(); return; }
+    popup._src = gainArrow;
+    showGainPopup(gainArrow, e.clientX, e.clientY);
+    return;
+  }
+  hideGainPopup();
+
   const span = e.target.closest('span.artist-link');
   if (span) { e.stopPropagation(); toggleArtistTimeline(span.dataset.artist, span.dataset.table); return; }
 
@@ -1083,10 +1135,13 @@ document.addEventListener('click', e => {
 
 // Hover highlight: thicken curve on mouseover, restore on mouseout
 document.addEventListener('mouseover', e => {
+  const arrow = e.target.closest('.recent-gain');
+  if (arrow) { showGainPopup(arrow, e.clientX, e.clientY); return; }
   const span = e.target.closest('span.artist-link');
   if (span) highlightArtistInPlots(span.dataset.artist, true);
 });
 document.addEventListener('mouseout', e => {
+  if (e.target.closest('.recent-gain')) { hideGainPopup(); return; }
   const span = e.target.closest('span.artist-link');
   if (span) highlightArtistInPlots(span.dataset.artist, false);
 });
@@ -1250,11 +1305,14 @@ document.getElementById('n-select').addEventListener('change', () => {
 loadChart();
 
 // ── Sticky header shadow on scroll ───────────────────────────────────────────
-// Dismiss song popup when tapping outside it on mobile
+// Dismiss popups when tapping outside on mobile
 document.addEventListener('touchstart', e => {
-  const popup = document.getElementById('song-popup');
-  if (popup.style.display !== 'none' && !popup.contains(e.target))
-    popup.style.display = 'none';
+  const sp = document.getElementById('song-popup');
+  if (sp.style.display !== 'none' && !sp.contains(e.target))
+    sp.style.display = 'none';
+  const gp = document.getElementById('gain-popup');
+  if (gp.style.display !== 'none' && !gp.contains(e.target) && !e.target.closest('.recent-gain'))
+    hideGainPopup();
 }, {passive: true});
 
 window.addEventListener('scroll', () => {
