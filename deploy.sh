@@ -4,7 +4,7 @@
 set -e
 
 GITHUB_USERNAME="abogatskiy"
-PI_HOST="100.94.40.119"    # Tailscale IP
+PI_HOST="pi"
 CONTAINER="billboard-web"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
