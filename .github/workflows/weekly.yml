@@ -18,15 +18,19 @@ jobs:
         with:
           python-version: '3.x'
 
-      # Cache the large raw data files so re-runs skip re-downloading
+      # Cache raw CSVs and Hot 100 JSON so unchanged charts don't need re-scraping
       - name: Restore raw data cache
         uses: actions/cache@v4
         with:
-          path: |
-            all.json
-            data/*.csv
-          key: billboard-raw-${{ hashFiles('bibbloard.py') }}-${{ github.run_id }}
-          restore-keys: billboard-raw-${{ hashFiles('bibbloard.py') }}-
+          path: raw/
+          key: billboard-raw-${{ github.run_id }}
+          restore-keys: billboard-raw-
+
+      - name: Install scraper dependency
+        run: pip3 install billboard.py
+
+      - name: Fetch latest chart data
+        run: python3 fetch_genre_updates.py --all
 
       - name: Regenerate JSON data
         run: python3 bibbloard.py

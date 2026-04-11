@@ -51,20 +51,35 @@ The **Unified cs (100)** toggle normalises all charts to 100 slots so that every
 
 ## Data sources
 
-- **Hot 100**: [mhollingshead/billboard-hot-100](https://github.com/mhollingshead/billboard-hot-100)
-- **Genre charts**: [pdp2600/chartscraper](https://github.com/pdp2600/chartscraper)
+- **Hot 100**: [mhollingshead/billboard-hot-100](https://github.com/mhollingshead/billboard-hot-100) — downloaded as `all.json` (~50 MB) and cached in `raw/`
+- **Genre charts**: scraped directly from Billboard.com using [billboard.py](https://github.com/guoguo12/billboard-charts), stored as CSVs in `raw/`
 
 ## Running locally
 
-`bibbloard.py` fetches raw chart data from the sources above, computes h-indices, and writes pre-generated JSON files to `data/`. Run it whenever you want to refresh the data:
+### Step 1 — fetch raw data
+
+`fetch_genre_updates.py` scrapes Billboard.com for all genre chart history and keeps the local CSVs up to date. It also re-downloads the Hot 100 JSON if stale. **This is the primary data source and must be run before `bibbloard.py`.**
+
+```bash
+pip3 install billboard.py
+python3 fetch_genre_updates.py        # interactive menu — pick which charts to update
+python3 fetch_genre_updates.py --all  # fetch everything non-interactively
+python3 fetch_genre_updates.py --dry-run  # see what would be fetched without making requests
+```
+
+The script is rate-limit-aware and uses adaptive delays when Billboard.com throttles requests.
+
+### Step 2 — generate JSON
+
+`bibbloard.py` reads the raw CSVs from `raw/`, computes all h-indices, and writes pre-generated JSON files to `data/`. Run it after fetching new data:
 
 ```bash
 python3 bibbloard.py
 ```
 
-The script downloads source data on first run (~42 MB for Hot 100) and caches it locally. Subsequent runs are fast.
+### Step 3 — serve locally
 
-To view the site locally, serve it with a local HTTP server (required for `fetch()` to load the JSON files):
+A local HTTP server is required for `fetch()` to load the JSON files:
 
 ```bash
 python3 -m http.server 8080
@@ -77,4 +92,4 @@ python3 -m http.server 8080
 ./deploy.sh
 ```
 
-Builds an ARM64 Docker image, pushes it to GitHub Container Registry, and updates the Portainer stack on a Raspberry Pi.
+Builds an ARM64 Docker image, pushes it to GitHub Container Registry, and updates the Portainer stack on a Raspberry Pi. A GitHub Actions workflow also runs this automatically every Monday.
