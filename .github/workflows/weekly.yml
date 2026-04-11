@@ -69,7 +69,7 @@ jobs:
         run: |
           echo "${{ secrets.PI_SSH_KEY }}" > /tmp/pi_key
           chmod 600 /tmp/pi_key
-          ssh -i /tmp/pi_key -o StrictHostKeyChecking=no alex@100.94.40.119 '
+          ssh -i /tmp/pi_key -o StrictHostKeyChecking=no ${{ secrets.PI_HOST }} '
             docker pull ghcr.io/abogatskiy/billboard-web:latest
             docker stop billboard-web 2>/dev/null || true
             docker rm   billboard-web 2>/dev/null || true
