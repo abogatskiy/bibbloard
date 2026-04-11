@@ -175,7 +175,7 @@ thead th.sort-desc::after{content:' ▼';font-size:.6rem;color:var(--accent);opa
 .hval{position:relative;display:inline-block}
 .recent-gain{
   position:absolute;left:100%;
-  color:#c0392b;font-size:.78em;margin-left:.18em;
+  color:#27ae60;font-size:.78em;margin-left:.18em;
   cursor:default;white-space:nowrap;
   top:50%;transform:translateY(-50%);
 }
@@ -796,12 +796,12 @@ function songMiniSvg(details, barColor) {
 
 function velocityColor(v) {
   if (!v || v <= 0) return null;
-  // Ramp from a muted rose → vivid red as v grows (max at v=5)
+  // Ramp from a muted green → vivid green as v grows (max at v=5)
   // Works on both light and dark backgrounds
   const t = Math.min(v / 5, 1);
-  const sat = Math.round(70 + 30 * t);
-  const lit = Math.round(58 - 16 * t);
-  return `hsl(0,${sat}%,${lit}%)`;
+  const sat = Math.round(55 + 30 * t);
+  const lit = Math.round(42 - 10 * t);
+  return `hsl(145,${sat}%,${lit}%)`;
 }
 
 // ── Timeline chart ────────────────────────────────────────────────────────────
