@@ -227,12 +227,15 @@ def parse_genre_rows(genre_name: str, filename: str):
             try:
                 peak       = int(row.get("peak_position")  or 101)
                 chart_date = row.get("chart_date", "")
+                woc        = int(row.get("weeks_on_chart") or 1)
             except (ValueError, TypeError):
                 continue
             if peak <= 0:
                 peak = 101
+            if woc < 1:
+                woc = 1
             rows.append({"artist": artist, "song": title,
-                         "peak": peak, "date": chart_date})
+                         "peak": peak, "date": chart_date, "woc": woc})
     return rows
 
 def min_row_date(rows: list) -> str:
@@ -303,6 +306,47 @@ def deduplicate_rows(rows: list, since: str = None, until: str = None,
         artist_songs[artist].append({
             "song": song, "weeks": weeks,
             "peak_score": peak_score, "integrated_score": integrated_score,
+            "first_year": first_year,
+        })
+    return dict(artist_songs)
+
+def deduplicate_snapshot(rows: list, chart_sizes: dict = None, unified_cs: int = None) -> dict:
+    """
+    Build artist_songs from a single-week snapshot using weeks_on_chart + peak_position.
+
+    weeks h-index and peak h-index are exact.
+    integrated_score is estimated as woc * peak_score / eff_cs
+    (assumes each week was at peak position — an overestimate but good enough for ranking).
+    """
+    cs = max(chart_sizes.values()) if chart_sizes else max(
+        (r.get("peak", 0) for r in rows), default=50)
+    eff_cs = unified_cs if unified_cs is not None else cs
+
+    from datetime import date as _d, timedelta as _td
+    artist_songs: dict = defaultdict(list)
+    seen: set = set()
+    for r in rows:
+        key = (r["artist"], r["song"])
+        if key in seen:
+            continue
+        seen.add(key)
+        peak = r.get("peak", 0)
+        woc  = r.get("woc", 1)
+        if not isinstance(peak, int) or peak <= 0 or peak > cs:
+            continue
+        score      = max(eff_cs - peak, 0)
+        integrated = woc * score / eff_cs if eff_cs > 0 else 0
+        # Approximate first year from snapshot date minus woc weeks
+        first_year = None
+        if r.get("date"):
+            try:
+                snap = _d.fromisoformat(r["date"])
+                first_year = (snap - _td(weeks=woc - 1)).year
+            except Exception:
+                pass
+        artist_songs[r["artist"]].append({
+            "song": r["song"], "weeks": woc,
+            "peak_score": score, "integrated_score": integrated,
             "first_year": first_year,
         })
     return dict(artist_songs)
@@ -842,19 +886,21 @@ def main():
 
     # Parse all genre CSVs upfront so we can count total work below
     all_genre_charts = GENRE_CHARTS_CORE + GENRE_CHARTS_OPTIONAL
-    loaded_genres: list = []   # [(genre_name, key, rows, min_date, max_date)]
+    loaded_genres: list = []   # [(genre_name, key, rows, min_date, max_date, is_snapshot)]
     skipped: list = []
     for genre_name, csv_filename in all_genre_charts:
         rows = parse_genre_rows(genre_name, csv_filename)
         if rows is None or len(rows) == 0:
             skipped.append(genre_name)
             continue
-        # Skip charts with only a single week of data — h-indices would be trivially 1
-        if min_row_date(rows) == max_row_date(rows):
-            skipped.append(genre_name + " (single week)")
-            continue
         key = CHART_KEYS[genre_name]
-        loaded_genres.append((genre_name, key, rows, min_row_date(rows), max_row_date(rows)))
+        is_snapshot = min_row_date(rows) == max_row_date(rows)
+        if is_snapshot:
+            # Accept snapshot if weeks_on_chart data is meaningful (some songs > 1 week)
+            if not any(r.get("woc", 1) > 1 for r in rows):
+                skipped.append(genre_name + " (single week, no history)")
+                continue
+        loaded_genres.append((genre_name, key, rows, min_row_date(rows), max_row_date(rows), is_snapshot))
 
     present = [g[0] for g in loaded_genres]
     print(f"  Genre CSVs: {', '.join(present) or 'none'}")
@@ -864,7 +910,7 @@ def main():
     # ── Build per-week chart-size maps (used for fair peak scoring) ──────────
     hot100_chart_sizes = build_chart_size_map(hot100_rows)
     genre_chart_sizes  = {key: build_chart_size_map(rows)
-                          for _, key, rows, _, _ in loaded_genres}
+                          for _, key, rows, _, _, _ in loaded_genres}
 
     # ── Export all-time Hot 100 CSVs (quick, before progress bar) ────────────
     hot100_all             = deduplicate_rows(hot100_rows, chart_sizes=hot100_chart_sizes)
@@ -877,7 +923,9 @@ def main():
     total_ticks = 0
     for _, period_since in PERIODS:
         total_ticks += 3 * _count_artists(hot100_rows, period_since)
-    for _, _, rows, _, _ in loaded_genres:
+    for _, _, rows, _, _, is_snap in loaded_genres:
+        if is_snap:
+            continue  # snapshots skip timeline computation
         for _, period_since in PERIODS:
             total_ticks += 3 * _count_artists(rows, period_since)
 
@@ -928,33 +976,61 @@ def main():
 
         # ── Genre charts ─────────────────────────────────────────────────────
         genre_summary: list = []
-        for genre_name, key, genre_rows, genre_min, genre_max in loaded_genres:
+        for genre_name, key, genre_rows, genre_min, genre_max, is_snapshot in loaded_genres:
             _lbl["chart"] = genre_name
             genre_periods: dict = {}
             gchart_sizes  = genre_chart_sizes[key]
-            for period_key, period_since in PERIODS:
-                _lbl["period"] = period_key
-                artist_songs = deduplicate_rows(genre_rows, period_since,
-                                               chart_sizes=gchart_sizes)
+
+            if is_snapshot:
+                # Single-week snapshot: compute h-indices from woc + peak_position.
+                # Only the all-time period is meaningful; windowed periods are skipped.
+                artist_songs = deduplicate_snapshot(genre_rows, chart_sizes=gchart_sizes)
                 if not artist_songs:
                     continue
-                cs          = compute_chart_size(gchart_sizes, period_since)
-                wr, pr, ir  = compute_rankings(artist_songs)
-                hhw         = hh_index(wr)
-                hhp         = hh_index(pr)
-                hhi         = hh_index(ir)
-                fname   = f"{key}.json" if period_key == "all" else f"{key}_{period_key}.json"
+                cs         = compute_chart_size(gchart_sizes)
+                wr, pr, ir = compute_rankings(artist_songs)
+                hhw        = hh_index(wr)
+                hhp        = hh_index(pr)
+                hhi        = hh_index(ir)
+                # Unified variant
+                u_songs = deduplicate_snapshot(genre_rows, chart_sizes=gchart_sizes, unified_cs=100)
+                _, u_pr, u_ir = compute_rankings(u_songs)
+                u_hhp = hh_index(u_pr)
+                u_hhi = hh_index(u_ir)
                 payload = build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
-                                              rows=genre_rows, latest_date=genre_max,
-                                              period_since=period_since,
-                                              tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
+                                              rows=None, latest_date=genre_max,
+                                              period_since=None,
                                               chart_sizes=gchart_sizes, unified_cs=100)
-                save_chart_data(payload, DATA_DIR / fname)
-                genre_periods[period_key] = {
+                save_chart_data(payload, DATA_DIR / f"{key}.json")
+                genre_periods["all"] = {
                     "hhw": hhw, "hhp": hhp, "hhi": hhi,
-                    "u_hhp": payload["u"].get("hhp", hhp),
-                    "u_hhi": payload["u"].get("hhi", hhi),
+                    "u_hhp": u_hhp, "u_hhi": u_hhi,
                 }
+            else:
+                for period_key, period_since in PERIODS:
+                    _lbl["period"] = period_key
+                    artist_songs = deduplicate_rows(genre_rows, period_since,
+                                                   chart_sizes=gchart_sizes)
+                    if not artist_songs:
+                        continue
+                    cs          = compute_chart_size(gchart_sizes, period_since)
+                    wr, pr, ir  = compute_rankings(artist_songs)
+                    hhw         = hh_index(wr)
+                    hhp         = hh_index(pr)
+                    hhi         = hh_index(ir)
+                    fname   = f"{key}.json" if period_key == "all" else f"{key}_{period_key}.json"
+                    payload = build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
+                                                  rows=genre_rows, latest_date=genre_max,
+                                                  period_since=period_since,
+                                                  tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
+                                                  chart_sizes=gchart_sizes, unified_cs=100)
+                    save_chart_data(payload, DATA_DIR / fname)
+                    genre_periods[period_key] = {
+                        "hhw": hhw, "hhp": hhp, "hhi": hhi,
+                        "u_hhp": payload["u"].get("hhp", hhp),
+                        "u_hhi": payload["u"].get("hhi", hhi),
+                    }
+
             cs_vals  = list(gchart_sizes.values())
             cs_lo, cs_hi = (min(cs_vals), max(cs_vals)) if cs_vals else (100, 100)
             genre_summary.append({
