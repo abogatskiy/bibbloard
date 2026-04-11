@@ -165,9 +165,13 @@ thead th.sort-desc::after{content:' ▼';font-size:.6rem;color:var(--accent);opa
 .vel-pos{font-weight:bold}
 
 /* ── Recent-gain arrow ────────────────────────────────────────────────────── */
+/* Arrow sits in a zero-width absolute span so numbers stay right-aligned */
+.hval{position:relative;display:inline-block}
 .recent-gain{
+  position:absolute;left:100%;
   color:#c0392b;font-size:.78em;margin-left:.18em;
-  cursor:default;vertical-align:.06em;
+  cursor:default;white-space:nowrap;
+  top:50%;transform:translateY(-50%);
 }
 
 /* ── Expandable artist timeline row ──────────────────────────────────────── */
@@ -1016,11 +1020,11 @@ function fillTableRows(id, rows, tableKey) {
       `<tr data-artist="${escHtml(artist)}" data-table="${tableKey}">` +
       `<td class="tr dim">${i + 1}</td>` +
       `<td><span class="artist-link" data-artist="${escHtml(artist)}" data-table="${tableKey}">${escHtml(artist)}</span></td>` +
-      `<td class="tr bld">${(+intH).toFixed(1)}${iArrow}</td>` +
+      `<td class="tr bld"><span class="hval">${(+intH).toFixed(1)}${iArrow}</span></td>` +
       yoyHtml(iYoY, true) +
-      `<td class="tr bld">${weeksH}${wArrow}</td>` +
+      `<td class="tr bld"><span class="hval">${weeksH}${wArrow}</span></td>` +
       yoyHtml(wYoY, false) +
-      `<td class="tr bld">${peakH}${pArrow}</td>` +
+      `<td class="tr bld"><span class="hval">${peakH}${pArrow}</span></td>` +
       yoyHtml(pYoY, false) +
       `<td class="tr dim">${n}</td>` +
       `</tr>`);
