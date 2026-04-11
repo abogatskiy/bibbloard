@@ -23,7 +23,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: raw/
-          key: billboard-raw-${{ github.run_id }}
+          key: billboard-raw-${{ github.run_number }}
           restore-keys: billboard-raw-
 
       - name: Install scraper dependency
