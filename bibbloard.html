@@ -512,8 +512,13 @@ function _oklchToHex(L, C, hDeg) {
 function artistColor(name) {
   let h = 5381;
   for (let i = 0; i < name.length; i++) h = Math.imul(h, 33) ^ name.charCodeAt(i);
-  const hue = ((h >>> 0) * 137.508) % 360;
-  return _oklchToHex(0.65, 0.17, hue);
+  const u = h >>> 0;
+  const hue = (u * 137.508) % 360;
+  const Ls = [0.55, 0.68, 0.78];
+  const Cs = [0.13, 0.18, 0.22];
+  const L = Ls[(u >> 8) % 3];
+  const C = Cs[(u >> 16) % 3];
+  return _oklchToHex(L, C, hue);
 }
 
 const _expandedArtists = new Set();
