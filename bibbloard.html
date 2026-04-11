@@ -493,14 +493,27 @@ function updateGenreTable(period) {
 let _currentData  = null;
 let _tableOffset  = 50;
 const TABLE_STEP  = 50;
-// ── Stable per-artist color — golden-angle hue in OKLCH (perceptually uniform) ─
-// HSL hue is non-uniform: green spans ~90° while red/blue span ~30°, causing
-// clustering. OKLCH distributes hues with equal perceived spacing.
+// ── Stable per-artist color — golden-angle hue in OKLCH → hex ────────────────
+// OKLCH gives perceptually uniform hue spacing; we convert to hex so Plotly
+// (which doesn't parse oklch()) can use the color in trace properties too.
+function _oklchToHex(L, C, hDeg) {
+  const h = hDeg * Math.PI / 180;
+  const a = C * Math.cos(h), b = C * Math.sin(h);
+  const l_ = L + 0.3963377774*a + 0.2158037573*b;
+  const m_ = L - 0.1055613458*a - 0.0638541728*b;
+  const s_ = L - 0.0894841775*a - 1.2914855480*b;
+  const l3 = l_**3, m3 = m_**3, s3 = s_**3;
+  const lin = x => x <= 0.0031308 ? 12.92*x : 1.055*Math.pow(x,1/2.4) - 0.055;
+  const r = Math.max(0,Math.min(1,lin( 4.0767416621*l3 - 3.3077115913*m3 + 0.2309699292*s3)));
+  const g = Math.max(0,Math.min(1,lin(-1.2684380046*l3 + 2.6097574011*m3 - 0.3413193965*s3)));
+  const bl= Math.max(0,Math.min(1,lin(-0.0041960863*l3 - 0.7034186147*m3 + 1.7076147010*s3)));
+  return '#' + [r,g,bl].map(x => Math.round(x*255).toString(16).padStart(2,'0')).join('');
+}
 function artistColor(name) {
   let h = 5381;
   for (let i = 0; i < name.length; i++) h = Math.imul(h, 33) ^ name.charCodeAt(i);
-  const hue = Math.round(((h >>> 0) * 137.508) % 360);
-  return `oklch(65% 0.17 ${hue})`;
+  const hue = ((h >>> 0) * 137.508) % 360;
+  return _oklchToHex(0.65, 0.17, hue);
 }
 
 const _expandedArtists = new Set();
