@@ -995,7 +995,7 @@ function recentGainArrow(series, latestDate, isFrac) {
   if (diff <= 0) return '';
   const diffStr = parseFloat(diff.toPrecision(2));
   const tip = `Increased by ${diffStr} in the last month`;
-  return `<span class="recent-gain" title="${tip}">\u2197</span>`;
+  return `<span class="recent-gain" title="${tip}">\u2197\uFE0E</span>`;
 }
 
 // ── Table rendering ───────────────────────────────────────────────────────────
