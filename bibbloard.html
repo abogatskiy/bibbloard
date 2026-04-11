@@ -1032,6 +1032,7 @@ function showGainPopup(el, clientX, clientY) {
   const pw = popup.offsetWidth || 200, ph = popup.offsetHeight || 80;
   let lx = cx + 10, ty = cy - 4;
   if (lx + pw > vw - 4) lx = cx - pw - 10;
+  if (lx < 4) lx = 4;
   if (ty + ph > vh - 4) ty = vh - ph - 4;
   if (ty < 4) ty = 4;
   popup.style.left = lx + 'px';
