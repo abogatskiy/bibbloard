@@ -5,7 +5,7 @@ set -e
 
 GITHUB_USERNAME="abogatskiy"
 PI_HOST="pi"
-CONTAINER="billboard-web"
+CONTAINER="bibbloard"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Load secrets from .env
@@ -31,19 +31,19 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_USERNAME" --password-std
 
 echo "Building $CONTAINER..."
 docker buildx build --platform linux/arm64 --no-cache \
-    -t "ghcr.io/$GITHUB_USERNAME/$CONTAINER:latest" \
+    -t "ghcr.io/$GITHUB_USERNAME/bibbloard:latest" \
     --push "$SCRIPT_DIR"
 echo "Image pushed!"
 
 # Deploy via SSH: pull new image, stop old container, start fresh
 echo "Deploying via SSH..."
 ssh "$PI_HOST" "
-    docker pull ghcr.io/$GITHUB_USERNAME/$CONTAINER:latest
+    docker pull ghcr.io/$GITHUB_USERNAME/bibbloard:latest
     docker stop $CONTAINER 2>/dev/null || true
     docker rm   $CONTAINER 2>/dev/null || true
     docker run -d --name $CONTAINER \
         --network nginx_proxy-network \
         --restart unless-stopped \
-        ghcr.io/$GITHUB_USERNAME/$CONTAINER:latest
+        ghcr.io/$GITHUB_USERNAME/bibbloard:latest
 " && echo "Done! Hard-refresh (Cmd+Shift+R)" || \
     echo "SSH deploy failed — check Pi connectivity (start Tailscale if needed)."

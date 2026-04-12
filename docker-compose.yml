@@ -1,7 +1,7 @@
 services:
-  billboard-web:
-    image: ghcr.io/abogatskiy/billboard-web:latest
-    container_name: billboard-web
+  bibbloard:
+    image: ghcr.io/abogatskiy/bibbloard:latest
+    container_name: bibbloard
     restart: unless-stopped
     networks:
       - nginx_proxy-network

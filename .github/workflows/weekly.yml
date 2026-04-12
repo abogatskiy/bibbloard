@@ -69,7 +69,7 @@ jobs:
           context: .
           platforms: linux/arm64
           push: true
-          tags: ghcr.io/abogatskiy/billboard-web:latest
+          tags: ghcr.io/abogatskiy/bibbloard:latest
 
       # Connect to Tailscale so we can reach the Pi
       - name: Connect to Tailscale
@@ -88,12 +88,12 @@ jobs:
           echo "${{ secrets.PI_SSH_KEY }}" > /tmp/pi_key
           chmod 600 /tmp/pi_key
           ssh -i /tmp/pi_key -o StrictHostKeyChecking=no ${{ secrets.PI_HOST }} '
-            docker pull ghcr.io/abogatskiy/billboard-web:latest
-            docker stop billboard-web 2>/dev/null || true
-            docker rm   billboard-web 2>/dev/null || true
-            docker run -d --name billboard-web \
+            docker pull ghcr.io/abogatskiy/bibbloard:latest
+            docker stop bibbloard 2>/dev/null || true
+            docker rm   bibbloard 2>/dev/null || true
+            docker run -d --name bibbloard \
               --network nginx_proxy-network \
               --restart unless-stopped \
-              ghcr.io/abogatskiy/billboard-web:latest
+              ghcr.io/abogatskiy/bibbloard:latest
           '
           rm /tmp/pi_key
