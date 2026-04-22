@@ -819,12 +819,18 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
     }
 
 def save_chart_data(payload: dict, path: Path):
-    """Write JSON atomically: write to .tmp then rename, so Ctrl-C can't corrupt."""
+    """Write JSON atomically, one top-level key per line for readable git diffs.
+    Nested values stay compact so large arrays don't bloat the file."""
     path.parent.mkdir(exist_ok=True)
     tmp = path.with_suffix(".tmp")
+    compact = json.JSONEncoder(separators=(",", ":")).encode
     try:
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(payload, f, separators=(",", ":"))
+            pairs = ',\n'.join(
+                f'  {json.dumps(k)}: {compact(v)}'
+                for k, v in payload.items()
+            )
+            f.write('{\n' + pairs + '\n}\n')
         os.replace(tmp, path)
     except:
         tmp.unlink(missing_ok=True)

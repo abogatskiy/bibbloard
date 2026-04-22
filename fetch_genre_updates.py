@@ -99,6 +99,12 @@ CHART_EARLIEST = {
     "alternative-songs":     "2000-01-01",
 }
 
+# Charts that Billboard only serves for the current week (no historical data).
+# For these, we OVERWRITE the CSV with just the latest week each run.
+SNAPSHOT_ONLY_SLUGS = {
+    "alternative-songs",
+}
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def get_existing_dates(csv_path: Path) -> set:
@@ -496,6 +502,11 @@ def fetch_chart(name: str, slug: str, filename: str,
             if earliest_existing > chart_start + datetime.timedelta(days=14):
                 hist_end   = earliest_existing - datetime.timedelta(weeks=1)
                 hist_dates = list(weeks_between(chart_start, hist_end))
+        # Snapshot-only slugs: Billboard only serves the current week, so any
+        # historical request just returns the latest date. Skip backfill entirely.
+        if slug in SNAPSHOT_ONLY_SLUGS:
+            hist_dates = []
+
         # Fast-check: probe 2 widely-spaced historical dates to see if the API
         # actually serves historical data (some charts always return the current week).
         if hist_dates and not dry_run:

@@ -12,6 +12,9 @@ deploy.sh
 # all.json (~42MB) and CSVs (~38MB) are safe under GitHub's 100MB file limit
 
 
+# Generated chart data — produced by bibbloard.py from raw/ sources, not committed
+data/*.json
+
 # macOS
 .DS_Store
 

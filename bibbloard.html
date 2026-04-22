@@ -1233,7 +1233,10 @@ function renderChart(data) {
   const periodLabel = periodSel.options[periodSel.selectedIndex]?.text || '';
   document.getElementById('chart-heading').textContent = chartLabel + ' · ' + periodLabel;
   const dd = document.getElementById('data-date');
-  if (dd) dd.textContent = data.latest_date ? 'Charts updated ' + data.latest_date : '';
+  if (dd) {
+    const maxDate = GENRE_SUMMARY.reduce((m, g) => g.latest > m ? g.latest : m, '');
+    dd.textContent = maxDate ? 'Charts updated ' + maxDate : '';
+  }
   redrawPlots();   // also sets _intSongPos and peak-desc
   renderTables();
   updateGenreTable(document.getElementById('period-select').value);
