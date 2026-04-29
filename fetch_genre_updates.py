@@ -274,9 +274,9 @@ def _download_with_progress(url: str, dest: Path, label: str):
         raise
 
 def fetch_hot100(cutoff: datetime.date, dry_run: bool) -> int:
-    """Re-download Hot 100 all.json from GitHub if the cache is stale (> 7 days old)."""
+    """Re-download Hot 100 all.json from GitHub if cache is behind the cutoff date."""
     latest = get_hot100_latest_date()
-    stale  = latest is None or (cutoff - latest).days > 7
+    stale  = latest is None or latest < cutoff
     if not stale:
         print(f"  Hot 100: up to date (latest chart: {latest})")
         return 0
@@ -378,11 +378,10 @@ def print_menu(cutoff: datetime.date):
     hot100_latest = get_hot100_latest_date()
     if hot100_latest is None:
         h100_status = "not cached — will download (~50 MB)"
-    elif (cutoff - hot100_latest).days <= 7:
+    elif hot100_latest >= cutoff:
         h100_status = f"up to date (latest: {hot100_latest})"
     else:
-        age = (cutoff - hot100_latest).days
-        h100_status = f"latest: {hot100_latest}  →  stale ({age}d old), re-download (~50 MB)"
+        h100_status = f"latest: {hot100_latest}  →  stale, re-download (~50 MB)"
     print(f"  {1:<3} {'Hot 100':<22} {h100_status}")
     items.append(("Hot 100", None, "all.json", None, hot100_latest))
 
