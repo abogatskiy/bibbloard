@@ -493,19 +493,20 @@ function updateGenreTable(period) {
 let _currentData  = null;
 let _tableOffset  = 50;
 const TABLE_STEP  = 50;
-// ── Stable per-artist color — golden-angle hue in OKLCH → hex ────────────────
-// OKLCH gives perceptually uniform hue spacing; we convert to hex so Plotly
-// (which doesn't parse oklch()) can use the color in trace properties too.
+// ── Stable per-artist color — golden-angle hue in HSL → hex ─────────────────
+// HSL is always within sRGB gamut. We convert to hex so Plotly (which doesn't
+// parse hsl()) can use the color in trace properties too.
 function artistColor(name) {
   let h = 5381;
   for (let i = 0; i < name.length; i++) h = Math.imul(h, 33) ^ name.charCodeAt(i);
   const u = h >>> 0;
   const hue = (u * 137.508) % 360;
-  // Vary lightness and saturation for diversity; HSL is always in-sRGB-gamut.
+  // Use >>> (unsigned shift): >> is signed and returns negative for u >= 2^31,
+  // making % 3 yield -1 or -2, which gives undefined from the array → NaN.
   const lits = [40, 55, 65];
   const sats = [70, 88, 76];
-  const lit = lits[(u >> 8) % 3] / 100;
-  const sat = sats[(u >> 16) % 3] / 100;
+  const lit = lits[(u >>> 8) % 3] / 100;
+  const sat = sats[(u >>> 16) % 3] / 100;
   const c = (1 - Math.abs(2*lit - 1)) * sat;
   const x = c * (1 - Math.abs((hue / 60) % 2 - 1));
   const m = lit - c / 2;
