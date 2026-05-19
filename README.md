@@ -40,7 +40,7 @@ The **genre h-h-index** table ranks the charts themselves: the largest *h* such 
 
 Charts differ in size: the Hot 100 has 100 slots per week; Dance/Electronic has only 50. This matters for the **peak h-index** — a #1 on Hot 100 scores 99, while a #1 on Dance/Electronic scores just 49, making raw peak scores incomparable across charts.
 
-The **Unified cs (100)** toggle normalises all charts to 100 slots so that every #1 scores 99, every #2 scores 98, etc., enabling fair cross-chart peak comparison. Weeks and integrated h-indices are already chart-size-neutral (weeks simply counts appearances; integrated divides by chart size each week) and are unaffected by this toggle.
+The **Unified cs (100)** toggle normalises all charts to 100 slots so that every #1 scores 99, every #2 scores 98, etc., enabling fair cross-chart peak comparison. The weeks h-index is already chart-size-neutral (it simply counts appearances) and is unaffected by this toggle.
 
 ## Features
 
