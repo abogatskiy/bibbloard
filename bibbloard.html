@@ -112,7 +112,7 @@ h1{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:3rem;le
   border:1px solid var(--border);border-radius:4px;padding:7px 10px;
   box-shadow:0 2px 8px rgba(0,0,0,.3);max-width:210px;
   font-size:.78rem;line-height:1.5;pointer-events:none}
-#weeks-plot .hovertext,#peak-plot .hovertext,#integrated-plot .hovertext{display:none!important}
+#integrated-plot .hovertext{display:none!important}
 
 /* ── Timeline: let Plotly tooltip overflow all containers and stack above rows */
 .timeline-plot .plot-container,
@@ -724,7 +724,37 @@ function createPlot(divId, curves, yLabel, chartSize) {
                    : divId === 'peak-plot'  ? 'dist'
                    : 'peak-equiv&nbsp;wks';
 
-  function showPlotPopup(evData) {
+  function showMarkerPopup(evData) {
+    const pt = evData.points[0];
+    if (pt.data.mode !== 'markers') { popup.style.display = 'none'; return; }
+    const meta = pt.data.customdata?.[pt.pointIndex] ?? '';
+    if (!meta) { popup.style.display = 'none'; return; }
+    let html = '';
+    meta.split('\n').forEach(row => {
+      const [a, h, c, song, year] = row.split('\t');
+      html += `<div><span style="font-weight:600;font-size:.82rem;color:${c}">${a}</span>` +
+              ` <span style="font-size:.75rem;color:var(--muted)">h&#8209;index&nbsp;${h}</span></div>`;
+      if (song) {
+        html += `<div style="font-size:.75rem;color:var(--text);margin:.05rem 0 .15rem .05rem"><i>${song}</i>` +
+                (year ? ` <span style="color:var(--muted)">(${year})</span>` : '') + `</div>`;
+      }
+    });
+    popup.innerHTML = html;
+    popup.style.display = 'block';
+    const ev = evData.event;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const cx = ev?.clientX ?? ev?.changedTouches?.[0]?.clientX ?? ev?.touches?.[0]?.clientX ?? vw / 2;
+    const cy = ev?.clientY ?? ev?.changedTouches?.[0]?.clientY ?? ev?.touches?.[0]?.clientY ?? vh / 2;
+    let lx = cx + 14, ty = cy - 50;
+    if (lx + 190 > vw) lx = cx - 194;
+    if (ty < 4) ty = 4;
+    const popH = popup.offsetHeight || 140;
+    if (ty + popH > vh) ty = vh - popH - 4;
+    popup.style.left = lx + 'px';
+    popup.style.top  = ty + 'px';
+  }
+
+  function showIntPopup(evData) {
     const pt = evData.points[0];
     const isMarker = pt.data.mode === 'markers';
     let html = '';
@@ -754,7 +784,7 @@ function createPlot(divId, curves, yLabel, chartSize) {
       if (songName)
         html += `<div style="font-size:.75rem;color:var(--text);margin:.1rem 0 .15rem"><i>${songName}</i>` +
                 (year ? ` <span style="color:var(--muted)">(${year})</span>` : '') + `</div>`;
-      html += `<div style="font-size:.7rem;color:var(--muted);margin-bottom:${details ? 4 : 0}px">#${pt.x} &middot; ${scoreLabel}:&nbsp;${score}</div>`;
+      html += `<div style="font-size:.7rem;color:var(--muted);margin-bottom:${details ? 4 : 0}px">#${pt.x} &middot; peak-equiv&nbsp;wks:&nbsp;${score}</div>`;
       if (details) html += songMiniSvg(details, color);
     }
     popup.innerHTML = html;
@@ -772,9 +802,15 @@ function createPlot(divId, curves, yLabel, chartSize) {
     popup.style.top  = ty + 'px';
   }
 
-  plotEl.on('plotly_hover', showPlotPopup);
-  plotEl.on('plotly_click', showPlotPopup);
-  plotEl.on('plotly_unhover', () => { popup.style.display = 'none'; });
+  if (divId === 'integrated-plot') {
+    plotEl.on('plotly_hover', showIntPopup);
+    plotEl.on('plotly_click', showIntPopup);
+    plotEl.on('plotly_unhover', () => { popup.style.display = 'none'; });
+  } else {
+    plotEl.on('plotly_hover', showMarkerPopup);
+    plotEl.on('plotly_click', showMarkerPopup);
+    plotEl.on('plotly_unhover', () => { popup.style.display = 'none'; });
+  }
 }
 
 // ── Velocity colour ───────────────────────────────────────────────────────────
