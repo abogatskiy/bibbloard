@@ -30,7 +30,9 @@ All three metrics reward breadth *and* depth: you need many charting songs, and 
 | Gospel | 2005 – present |
 | Rock | 2009 – present |
 | Dance/Electronic | 2013 – present |
-| Alternative | 2025 – present (recently added) |
+| Alternative | 2025 – present* |
+
+\* Historic data is unavailable for this chart; coverage accumulates weekly as the scraper runs.
 
 The **genre h-h-index** table ranks the charts themselves: the largest *h* such that *h* artists on that chart have h-index ≥ *h*.
 
