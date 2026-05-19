@@ -670,7 +670,7 @@ function createPlot(divId, curves, yLabel, chartSize) {
       const hDisp = Number.isInteger(c.h) ? String(c.h) : c.h.toFixed(1);
       const song  = c.songs?.[c.h - 1] ?? '';
       const year  = c.years?.[c.h - 1] ?? '';
-      const score = (c.values[c.h - 1] ?? c.h).toFixed(1);
+      const score = String(c.values[c.h - 1] ?? c.h);
       return c.artist + '\t' + hDisp + '\t' + artistColor(c.artist) + '\t' + song + '\t' + year + '\t' + score;
     }).join('\n');
     traces.push({
@@ -722,9 +722,7 @@ function createPlot(divId, curves, yLabel, chartSize) {
 
   const popup  = document.getElementById('song-popup');
   const plotEl = document.getElementById(divId);
-  const scoreLabel = divId === 'weeks-plot' ? 'wks'
-                   : divId === 'peak-plot'  ? 'dist'
-                   : 'peak-equiv&nbsp;wks';
+  const scoreLabel = yLabel;
 
   function showMarkerPopup(evData) {
     const pt = evData.points[0];
