@@ -664,11 +664,13 @@ function createPlot(divId, curves, yLabel, chartSize) {
     const hover = g.entries.map(c =>
       '<b>' + c.artist + '</b>\u00a0h\u2011index\u00a0=\u00a0' + c.h
     ).join('<br>');
-    // Encode artist/h/color per entry as tab-delimited rows, one per line.
+    // Encode artist/h/color/song/year per entry as tab-delimited rows, one per line.
     // Used by the integrated-plot popup handler to show marker hover info.
     const meta = g.entries.map(c => {
       const hDisp = Number.isInteger(c.h) ? String(c.h) : c.h.toFixed(1);
-      return c.artist + '\t' + hDisp + '\t' + artistColor(c.artist);
+      const song  = c.songs?.[c.h - 1] ?? '';
+      const year  = c.years?.[c.h - 1] ?? '';
+      return c.artist + '\t' + hDisp + '\t' + artistColor(c.artist) + '\t' + song + '\t' + year;
     }).join('\n');
     traces.push({
       x: [g.x], y: [g.y],
@@ -728,9 +730,15 @@ function createPlot(divId, curves, yLabel, chartSize) {
         const meta = pt.data.customdata?.[pt.pointIndex] ?? '';
         if (!meta) { popup.style.display = 'none'; return; }
         meta.split('\n').forEach(row => {
-          const [a, h, c] = row.split('\t');
+          const [a, h, c, song, year] = row.split('\t');
           html += `<div><span style="font-weight:600;font-size:.82rem;color:${c}">${a}</span>` +
                   ` <span style="font-size:.75rem;color:var(--muted)">h&#8209;index&nbsp;${h}</span></div>`;
+          if (song) {
+            html += `<div style="font-size:.75rem;color:var(--text);margin:.05rem 0 .15rem .05rem"><i>${song}</i>` +
+                    (year ? ` <span style="color:var(--muted)">(${year})</span>` : '') + `</div>`;
+            const details = _intSongPos[a]?.[song];
+            if (details) html += songMiniSvg(details, c);
+          }
         });
       } else {
         const cd       = pt.data.customdata?.[pt.pointIndex];
