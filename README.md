@@ -30,7 +30,7 @@ All three metrics reward breadth *and* depth: you need many charting songs, and 
 | Gospel | 2005 – present |
 | Rock | 2009 – present |
 | Dance/Electronic | 2013 – present |
-| Alternative | 2025 – present* |
+| Alternative | 2026 – present* |
 
 \* Historic data is unavailable for this chart; coverage accumulates weekly as the scraper runs.
 
