@@ -112,7 +112,7 @@ h1{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:3rem;le
   border:1px solid var(--border);border-radius:4px;padding:7px 10px;
   box-shadow:0 2px 8px rgba(0,0,0,.3);max-width:210px;
   font-size:.78rem;line-height:1.5;pointer-events:none}
-#integrated-plot .hovertext{display:none!important}
+#weeks-plot .hovertext,#peak-plot .hovertext,#integrated-plot .hovertext{display:none!important}
 
 /* ── Timeline: let Plotly tooltip overflow all containers and stack above rows */
 .timeline-plot .plot-container,
@@ -718,62 +718,63 @@ function createPlot(divId, curves, yLabel, chartSize) {
     item.addEventListener('mouseleave', () => highlightArtistInPlots(name, false));
   });
 
-  if (divId === 'integrated-plot') {
-    const popup  = document.getElementById('song-popup');
-    const plotEl = document.getElementById(divId);
+  const popup  = document.getElementById('song-popup');
+  const plotEl = document.getElementById(divId);
+  const scoreLabel = divId === 'weeks-plot' ? 'wks'
+                   : divId === 'peak-plot'  ? 'dist'
+                   : 'peak-equiv&nbsp;wks';
 
-    function showIntPopup(evData) {
-      const pt = evData.points[0];
-      const isMarker = pt.data.mode === 'markers';
-      let html = '';
-      if (isMarker) {
-        const meta = pt.data.customdata?.[pt.pointIndex] ?? '';
-        if (!meta) { popup.style.display = 'none'; return; }
-        meta.split('\n').forEach(row => {
-          const [a, h, c, song, year] = row.split('\t');
-          html += `<div><span style="font-weight:600;font-size:.82rem;color:${c}">${a}</span>` +
-                  ` <span style="font-size:.75rem;color:var(--muted)">h&#8209;index&nbsp;${h}</span></div>`;
-          if (song) {
-            html += `<div style="font-size:.75rem;color:var(--text);margin:.05rem 0 .15rem .05rem"><i>${song}</i>` +
-                    (year ? ` <span style="color:var(--muted)">(${year})</span>` : '') + `</div>`;
-            const details = _intSongPos[a]?.[song];
-            if (details) html += songMiniSvg(details, c);
-          }
-        });
-      } else {
-        const cd       = pt.data.customdata?.[pt.pointIndex];
-        const songName = cd?.[0] ?? '';
-        const year     = cd?.[1] ?? '';
-        const artist   = pt.data.name;
-        const color    = artistColor(artist);
-        const score    = (+pt.y).toFixed(1);
-        const details  = songName ? _intSongPos[artist]?.[songName] : null;
-        html = `<div style="font-weight:600;font-size:.82rem;color:${color}">${artist}</div>`;
-        if (songName)
-          html += `<div style="font-size:.75rem;color:var(--text);margin:.1rem 0 .15rem"><i>${songName}</i>` +
+  function showPlotPopup(evData) {
+    const pt = evData.points[0];
+    const isMarker = pt.data.mode === 'markers';
+    let html = '';
+    if (isMarker) {
+      const meta = pt.data.customdata?.[pt.pointIndex] ?? '';
+      if (!meta) { popup.style.display = 'none'; return; }
+      meta.split('\n').forEach(row => {
+        const [a, h, c, song, year] = row.split('\t');
+        html += `<div><span style="font-weight:600;font-size:.82rem;color:${c}">${a}</span>` +
+                ` <span style="font-size:.75rem;color:var(--muted)">h&#8209;index&nbsp;${h}</span></div>`;
+        if (song) {
+          html += `<div style="font-size:.75rem;color:var(--text);margin:.05rem 0 .15rem .05rem"><i>${song}</i>` +
                   (year ? ` <span style="color:var(--muted)">(${year})</span>` : '') + `</div>`;
-        html += `<div style="font-size:.7rem;color:var(--muted);margin-bottom:${details ? 4 : 0}px">#${pt.x} &middot; peak-equiv&nbsp;wks:&nbsp;${score}</div>`;
-        if (details) html += songMiniSvg(details, color);
-      }
-      popup.innerHTML = html;
-      popup.style.display = 'block';
-      const ev = evData.event;
-      const vw = window.innerWidth, vh = window.innerHeight;
-      const cx = ev?.clientX ?? ev?.changedTouches?.[0]?.clientX ?? ev?.touches?.[0]?.clientX ?? vw / 2;
-      const cy = ev?.clientY ?? ev?.changedTouches?.[0]?.clientY ?? ev?.touches?.[0]?.clientY ?? vh / 2;
-      let lx = cx + 14, ty = cy - 50;
-      if (lx + 190 > vw) lx = cx - 194;
-      if (ty < 4) ty = 4;
-      const popH = popup.offsetHeight || 140;
-      if (ty + popH > vh) ty = vh - popH - 4;
-      popup.style.left = lx + 'px';
-      popup.style.top  = ty + 'px';
+          const details = _intSongPos[a]?.[song];
+          if (details) html += songMiniSvg(details, c);
+        }
+      });
+    } else {
+      const cd       = pt.data.customdata?.[pt.pointIndex];
+      const songName = cd?.[0] ?? '';
+      const year     = cd?.[1] ?? '';
+      const artist   = pt.data.name;
+      const color    = artistColor(artist);
+      const score    = (+pt.y).toFixed(1);
+      const details  = songName ? _intSongPos[artist]?.[songName] : null;
+      html = `<div style="font-weight:600;font-size:.82rem;color:${color}">${artist}</div>`;
+      if (songName)
+        html += `<div style="font-size:.75rem;color:var(--text);margin:.1rem 0 .15rem"><i>${songName}</i>` +
+                (year ? ` <span style="color:var(--muted)">(${year})</span>` : '') + `</div>`;
+      html += `<div style="font-size:.7rem;color:var(--muted);margin-bottom:${details ? 4 : 0}px">#${pt.x} &middot; ${scoreLabel}:&nbsp;${score}</div>`;
+      if (details) html += songMiniSvg(details, color);
     }
-
-    plotEl.on('plotly_hover', showIntPopup);
-    plotEl.on('plotly_click', showIntPopup);
-    plotEl.on('plotly_unhover', () => { popup.style.display = 'none'; });
+    popup.innerHTML = html;
+    popup.style.display = 'block';
+    const ev = evData.event;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const cx = ev?.clientX ?? ev?.changedTouches?.[0]?.clientX ?? ev?.touches?.[0]?.clientX ?? vw / 2;
+    const cy = ev?.clientY ?? ev?.changedTouches?.[0]?.clientY ?? ev?.touches?.[0]?.clientY ?? vh / 2;
+    let lx = cx + 14, ty = cy - 50;
+    if (lx + 190 > vw) lx = cx - 194;
+    if (ty < 4) ty = 4;
+    const popH = popup.offsetHeight || 140;
+    if (ty + popH > vh) ty = vh - popH - 4;
+    popup.style.left = lx + 'px';
+    popup.style.top  = ty + 'px';
   }
+
+  plotEl.on('plotly_hover', showPlotPopup);
+  plotEl.on('plotly_click', showPlotPopup);
+  plotEl.on('plotly_unhover', () => { popup.style.display = 'none'; });
 }
 
 // ── Velocity colour ───────────────────────────────────────────────────────────
