@@ -679,10 +679,8 @@ function createPlot(divId, curves, yLabel, chartSize) {
                line: {color: col.bg, width: hl ? 3.5 : 2.5}},
       showlegend: false,
       customdata: [meta],
-      // integrated-plot suppresses via CSS; weeks/peak skip native so custom popup is sole tooltip
-      ...(divId === 'integrated-plot'
-          ? {hovertemplate: hover + '<extra></extra>'}
-          : {hoverinfo: 'skip'})
+      // integrated-plot suppresses via CSS; weeks/peak use empty template so event fires but nothing renders
+      hovertemplate: divId === 'integrated-plot' ? hover + '<extra></extra>' : '<extra></extra>'
     });
   }
 
