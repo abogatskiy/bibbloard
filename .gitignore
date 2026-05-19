@@ -14,6 +14,7 @@ deploy.sh
 
 # Generated chart data — produced by bibbloard.py from raw/ sources, not committed
 data/*.json
+output/
 
 # macOS
 .DS_Store
