@@ -670,7 +670,8 @@ function createPlot(divId, curves, yLabel, chartSize) {
       const hDisp = Number.isInteger(c.h) ? String(c.h) : c.h.toFixed(1);
       const song  = c.songs?.[c.h - 1] ?? '';
       const year  = c.years?.[c.h - 1] ?? '';
-      return c.artist + '\t' + hDisp + '\t' + artistColor(c.artist) + '\t' + song + '\t' + year;
+      const score = (c.values[c.h - 1] ?? c.h).toFixed(1);
+      return c.artist + '\t' + hDisp + '\t' + artistColor(c.artist) + '\t' + song + '\t' + year + '\t' + score;
     }).join('\n');
     traces.push({
       x: [g.x], y: [g.y],
@@ -732,13 +733,14 @@ function createPlot(divId, curves, yLabel, chartSize) {
     if (!meta) { popup.style.display = 'none'; return; }
     let html = '';
     meta.split('\n').forEach(row => {
-      const [a, h, c, song, year] = row.split('\t');
+      const [a, h, c, song, year, score] = row.split('\t');
       html += `<div><span style="font-weight:600;font-size:.82rem;color:${c}">${a}</span>` +
               ` <span style="font-size:.75rem;color:var(--muted)">h&#8209;index&nbsp;${h}</span></div>`;
       if (song) {
-        html += `<div style="font-size:.75rem;color:var(--text);margin:.05rem 0 .15rem .05rem"><i>${song}</i>` +
+        html += `<div style="font-size:.75rem;color:var(--text);margin:.05rem 0 .05rem .05rem"><i>${song}</i>` +
                 (year ? ` <span style="color:var(--muted)">(${year})</span>` : '') + `</div>`;
       }
+      html += `<div style="font-size:.7rem;color:var(--muted);margin-bottom:3px">#${h} &middot; ${scoreLabel}:&nbsp;${score}</div>`;
     });
     popup.innerHTML = html;
     popup.style.display = 'block';
