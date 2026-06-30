@@ -11,6 +11,7 @@
 <style>
 /* ── Theme tokens ─────────────────────────────────────────────────────────── */
 :root {
+  --footer-h:  2rem;
   --bg:        #f7f7f5;
   --surface:   #ffffff;
   --border:    #e2e2de;
@@ -52,7 +53,7 @@
 /* ── Reset & base ─────────────────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{transition:background .18s,color .18s}
-body{font-family:Georgia,'Times New Roman',serif;background:var(--bg);color:var(--text);line-height:1.55;transition:background .18s,color .18s}
+body{font-family:Georgia,'Times New Roman',serif;background:var(--bg);color:var(--text);line-height:1.55;transition:background .18s,color .18s;padding-bottom:4.5rem}
 a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
 
@@ -205,8 +206,9 @@ thead th.sort-desc::after{content:' ▼';font-size:.6rem;color:var(--accent);opa
 
 /* ── News chyron (TV ticker strip) ───────────────────────────────────────── */
 #chyron-bar{
+  position:fixed;bottom:var(--footer-h,2rem);left:0;right:0;z-index:49;
   display:flex;align-items:stretch;
-  margin-top:.5rem;border-radius:4px;overflow:hidden;
+  overflow:hidden;
   background:var(--thead-bg);color:var(--thead-fg);
   min-height:2.1rem;
 }
@@ -315,17 +317,6 @@ footer{
       <label style="display:flex;align-items:center;gap:.3rem;cursor:pointer;font-size:.84rem;color:var(--muted);margin-left:.4rem" title="Treat all charts as 100 entries wide for fair cross-chart comparison">
         <input type="checkbox" id="unified-cs"> Unified cs&nbsp;(100)
       </label>
-    </div>
-    <!-- News chyron (TV ticker) -->
-    <div id="chyron-bar" style="display:none">
-      <div class="chyron-badge">THIS WEEK</div>
-      <div class="chyron-track-wrap">
-        <div id="chyron-track"></div>
-      </div>
-      <div class="chyron-nav">
-        <button class="chyron-btn" id="chyron-prev" title="Previous item">&#8249;</button>
-        <button class="chyron-btn" id="chyron-next" title="Next item">&#8250;</button>
-      </div>
     </div>
   </div>
   <div class="section-title" style="margin-top:1rem">Genre H-H-Index Ranking</div>
@@ -1628,6 +1619,17 @@ window.addEventListener('scroll', () => {
 }, {passive: true});
 </script>
 
+<!-- News chyron (TV ticker) -->
+<div id="chyron-bar" style="display:none">
+  <div class="chyron-badge">THIS WEEK</div>
+  <div class="chyron-track-wrap">
+    <div id="chyron-track"></div>
+  </div>
+  <div class="chyron-nav">
+    <button class="chyron-btn" id="chyron-prev" title="Previous item">&#8249;</button>
+    <button class="chyron-btn" id="chyron-next" title="Next item">&#8250;</button>
+  </div>
+</div>
 <footer>
   <span id="data-date" style="color:var(--muted)"></span>
   <span>·</span>
