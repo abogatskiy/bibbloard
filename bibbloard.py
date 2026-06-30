@@ -1201,6 +1201,18 @@ def main():
         if len(latest_news) >= 40:
             break
 
+    # Interleave by chart so the strip alternates charts instead of grouping them
+    from collections import OrderedDict as _OD
+    _buckets: dict = _OD()
+    for item in latest_news:
+        _buckets.setdefault(item.get('chart_key', ''), []).append(item)
+    interleaved: list = []
+    while any(_buckets.values()):
+        for ck in list(_buckets):
+            if _buckets[ck]:
+                interleaved.append(_buckets[ck].pop(0))
+    latest_news = interleaved
+
     for path, data in [
         (DATA_DIR / "latest_news.json", latest_news),
         (_snap_path, new_snapshot),
