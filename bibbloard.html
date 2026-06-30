@@ -203,45 +203,49 @@ thead th.sort-desc::after{content:' ▼';font-size:.6rem;color:var(--accent);opa
 }
 .tl-sigma-lbl{min-width:4rem;color:var(--muted);font-size:.74rem}
 
-/* ── News chyron ─────────────────────────────────────────────────────────── */
+/* ── News chyron (TV ticker strip) ───────────────────────────────────────── */
 #chyron-bar{
-  display:flex;align-items:center;gap:.5rem;
-  margin-top:.5rem;padding:.3rem .55rem;
-  background:var(--surface);border:1px solid var(--border);border-radius:4px;
-  font-size:.78rem;min-height:2rem;position:relative;overflow:hidden;
+  display:flex;align-items:stretch;
+  margin-top:.5rem;border-radius:4px;overflow:hidden;
+  background:var(--thead-bg);color:var(--thead-fg);
+  min-height:2.1rem;
 }
-.chyron-dot{
-  flex-shrink:0;width:6px;height:6px;border-radius:50%;
-  background:#e15759;animation:chyron-pulse 1.6s ease-in-out infinite;
-}
-@keyframes chyron-pulse{0%,100%{opacity:1}50%{opacity:.25}}
 .chyron-badge{
-  flex-shrink:0;font-size:.63rem;font-weight:bold;
-  text-transform:uppercase;letter-spacing:.08em;
-  color:var(--bg);background:var(--accent);
-  padding:.12rem .42rem;border-radius:3px;white-space:nowrap;
+  flex-shrink:0;background:#e15759;color:#fff;
+  font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;
+  font-size:.88rem;letter-spacing:.1em;
+  padding:0 .7rem;display:flex;align-items:center;white-space:nowrap;
 }
-#chyron-text{
-  flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  cursor:pointer;color:var(--text);transition:color .12s;
+.chyron-track-wrap{flex:1;overflow:hidden;display:flex;align-items:center}
+#chyron-track{
+  display:inline-flex;align-items:center;
+  white-space:nowrap;will-change:transform;cursor:pointer;
 }
-#chyron-text:hover{color:var(--accent)}
+.chyron-item{display:inline-flex;align-items:center;gap:.28rem;padding:0 .6rem}
+.chyron-item:hover .ci-artist{opacity:.75}
+.ci-item-sep{color:#edc948;font-size:1rem;margin:0 .5rem;opacity:.7;user-select:none}
+.ci-sep  {color:rgba(255,255,255,.28);margin:0 .3rem;font-size:.75rem;user-select:none}
+.ci-artist{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:1rem;color:#fff;letter-spacing:.04em}
+.ci-metric{font-size:.63rem;color:rgba(255,255,255,.52);letter-spacing:.07em;text-transform:uppercase}
+.ci-value {font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:1rem;color:#fff;margin:0 .05rem}
+.ci-up   {color:#27ae60;font-size:.82rem}
+.ci-down {color:#e15759;font-size:.82rem}
+.ci-delta{color:#27ae60;font-size:.7rem;font-weight:bold}
+.ci-song {font-style:italic;color:rgba(255,255,255,.58);font-size:.74rem}
+.ci-chart{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:.82rem;color:#8bbdd9;letter-spacing:.04em}
+.ci-hi   {color:#edc948;font-family:'Bebas Neue','Impact',sans-serif;font-size:.85rem;letter-spacing:.06em}
 .chyron-nav{
-  flex-shrink:0;display:flex;align-items:center;gap:.22rem;
-  color:var(--muted);font-size:.72rem;
+  flex-shrink:0;display:flex;align-items:center;
+  gap:.15rem;padding:0 .35rem;
+  border-left:1px solid rgba(255,255,255,.1);
 }
 .chyron-btn{
-  background:none;border:1px solid var(--border);border-radius:3px;
-  padding:.06rem .32rem;cursor:pointer;color:var(--muted);
-  font-size:.82rem;line-height:1.2;
-  transition:color .12s,border-color .12s;
+  background:none;border:1px solid rgba(255,255,255,.18);border-radius:3px;
+  padding:.04rem .3rem;cursor:pointer;color:rgba(255,255,255,.55);
+  font-size:.9rem;line-height:1.3;
+  transition:background .12s,color .12s;
 }
-.chyron-btn:hover{color:var(--text);border-color:var(--muted)}
-#chyron-counter{min-width:2.4rem;text-align:center;font-size:.7rem}
-#chyron-progress{
-  position:absolute;bottom:0;left:0;height:2px;
-  background:var(--accent);opacity:.35;width:0%;
-}
+.chyron-btn:hover{background:rgba(255,255,255,.1);color:#fff}
 
 /* ── Load more ────────────────────────────────────────────────────────────── */
 .load-more-wrap{text-align:center;margin:1rem 0 2.5rem}
@@ -311,17 +315,16 @@ footer{
         <input type="checkbox" id="unified-cs"> Unified cs&nbsp;(100)
       </label>
     </div>
-    <!-- News chyron -->
+    <!-- News chyron (TV ticker) -->
     <div id="chyron-bar" style="display:none">
-      <span class="chyron-dot"></span>
-      <span class="chyron-badge">This week</span>
-      <div id="chyron-text" title="Click to view chart"></div>
-      <div class="chyron-nav">
-        <button class="chyron-btn" id="chyron-prev" title="Previous">&#8249;</button>
-        <span id="chyron-counter"></span>
-        <button class="chyron-btn" id="chyron-next" title="Next">&#8250;</button>
+      <div class="chyron-badge">THIS WEEK</div>
+      <div class="chyron-track-wrap">
+        <div id="chyron-track"></div>
       </div>
-      <div id="chyron-progress"></div>
+      <div class="chyron-nav">
+        <button class="chyron-btn" id="chyron-prev" title="Previous item">&#8249;</button>
+        <button class="chyron-btn" id="chyron-next" title="Next item">&#8250;</button>
+      </div>
     </div>
   </div>
   <div class="section-title" style="margin-top:1rem">Genre H-H-Index Ranking</div>
@@ -485,86 +488,133 @@ function plotColors() {
   };
 }
 
-// ── News chyron ───────────────────────────────────────────────────────────────
-let _chyronItems  = [];
-let _chyronIdx    = 0;
-let _chyronTimer  = null;
+// ── News chyron (TV ticker strip) ────────────────────────────────────────────
+let _chyronItems   = [];
+let _chyronScrollX = 0;
+let _chyronHalfW   = 0;
+let _chyronItemXs  = [];
+let _chyronPaused  = false;
+let _chyronRafId   = null;
+let _chyronLastTs  = null;
 let _pendingChyronArtist = null;
-const CHYRON_MS   = 6000;
+const CHYRON_SPEED = 55;
 
-function _chyronLabel(item) {
-  const chart = item.chart_label || '';
+function _chyronItemHtml(item) {
+  const chart = `<span class="ci-chart">${escHtml((item.chart_label || '').toUpperCase())}</span>`;
+  const art   = item.artist
+    ? `<span class="ci-artist">${escHtml(item.artist.toUpperCase())}</span>` : '';
+  const dot = `<span class="ci-sep">&middot;</span>`;
   switch (item.type) {
     case 'hindex_gain': {
-      const ml = item.metric === 'weeks' ? 'Weeks' : item.metric === 'peak' ? 'Peak' : 'Integrated';
+      const ml = item.metric === 'weeks' ? 'WKS H'
+               : item.metric === 'peak'  ? 'PK H' : 'INT H';
       const hd = item.metric === 'integrated' ? (+item.h).toFixed(1) : item.h;
-      let t = `${item.artist}'s ${ml} h-index reached ${hd} on ${chart}`;
-      if (item.songs && item.songs.length) {
-        t += ` — “${item.songs[0]}”`;
-        if (item.songs.length > 1) t += ` +${item.songs.length - 1} more`;
-      }
-      return t;
+      const dh = item.metric === 'integrated'
+        ? (+Math.abs(item.h - item.prev_h)).toFixed(1)
+        : Math.abs(item.h - item.prev_h);
+      const song = item.songs?.[0]
+        ? `${dot}<span class="ci-song">&ldquo;${escHtml(item.songs[0])}&rdquo;</span>` : '';
+      return art + dot +
+        `<span class="ci-metric">${ml}</span>` +
+        `<span class="ci-value">${hd}</span>` +
+        `<span class="ci-up">&#8593;</span>` +
+        `<span class="ci-delta">+${dh}</span>` +
+        song + dot + chart;
     }
     case 'hhindex_change': {
-      const ml  = item.metric === 'weeks' ? 'Weeks' : item.metric === 'peak' ? 'Peak' : 'Integrated';
-      const dir = item.new_hh > item.prev_hh ? 'rose to' : 'fell to';
-      return `${chart} ${ml} H-H-Index ${dir} ${item.new_hh} (was ${item.prev_hh})`;
+      const ml = item.metric === 'weeks' ? 'WKS H-H'
+               : item.metric === 'peak'  ? 'PK H-H' : 'INT H-H';
+      const up = item.new_hh > item.prev_hh;
+      return chart + dot +
+        `<span class="ci-metric">${ml}</span>` +
+        `<span class="ci-value">${item.new_hh}</span>` +
+        `<span class="${up ? 'ci-up' : 'ci-down'}">${up ? '&#8593;' : '&#8595;'}</span>` +
+        (up ? `<span class="ci-hi">NEW HIGH</span>` : '');
     }
-    case 'rank_change':
-      return `${item.artist} climbed to #${item.rank} on ${chart} (was #${item.prev_rank})`;
+    case 'rank_change': {
+      const up = (item.change ?? 0) > 0;
+      const ch = Math.abs(item.change ?? 0);
+      return art + dot +
+        `<span class="ci-metric">RANK</span>` +
+        `<span class="${up ? 'ci-up' : 'ci-down'}">${up ? '&#8593;' : '&#8595;'}</span>` +
+        `<span class="ci-delta">${ch}</span>` +
+        `<span class="ci-metric">TO</span>` +
+        `<span class="ci-value">#${item.rank}</span>` +
+        dot + chart;
+    }
+    case 'top10_entry':
+      return art + dot +
+        `<span class="ci-hi">ENTERS TOP 10</span>` +
+        `<span class="ci-value">#${item.rank}</span>` +
+        dot + chart;
     case 'new_entry':
-      return `${item.artist} enters the ${chart} rankings at #${item.rank}`;
-    default:
-      return '';
+      return art + dot +
+        `<span class="ci-hi">NEW ENTRY</span>` +
+        `<span class="ci-value">#${item.rank}</span>` +
+        dot + chart;
+    default: return '';
   }
 }
 
-function _showChyronItem(idx) {
-  const item = _chyronItems[idx];
-  if (!item) return;
-  const label = _chyronLabel(item);
-  if (!label) return;
-  document.getElementById('chyron-text').textContent = label;
-  document.getElementById('chyron-counter').textContent = `${idx + 1} / ${_chyronItems.length}`;
+function _chyronRender() {
+  const track = document.getElementById('chyron-track');
+  if (!track || !_chyronItems.length) return;
+  const seg = _chyronItems.map((item, i) =>
+    `<span class="chyron-item" data-idx="${i}">${_chyronItemHtml(item)}</span>` +
+    `<span class="ci-item-sep" aria-hidden="true">&#11047;</span>`
+  ).join('');
+  track.innerHTML = seg + seg;
+  requestAnimationFrame(() => {
+    _chyronItemXs = [];
+    const els = track.querySelectorAll('.chyron-item');
+    for (let i = 0; i < _chyronItems.length; i++) _chyronItemXs.push(els[i].offsetLeft);
+    _chyronHalfW = track.scrollWidth / 2;
+  });
 }
 
-function _resetChyronTimer() {
-  clearTimeout(_chyronTimer);
-  const prog = document.getElementById('chyron-progress');
-  prog.style.transition = 'none';
-  prog.style.width = '0%';
-  // Double rAF so transition takes effect after the style resets
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    prog.style.transition = `width ${CHYRON_MS}ms linear`;
-    prog.style.width = '100%';
-  }));
-  _chyronTimer = setTimeout(() => _stepChyron(1), CHYRON_MS);
+function _chyronTick(ts) {
+  if (!_chyronPaused && _chyronLastTs !== null) {
+    const dt = (ts - _chyronLastTs) / 1000;
+    _chyronScrollX += CHYRON_SPEED * dt;
+    if (_chyronHalfW > 0 && _chyronScrollX >= _chyronHalfW) _chyronScrollX -= _chyronHalfW;
+    const t = document.getElementById('chyron-track');
+    if (t) t.style.transform = `translateX(-${_chyronScrollX}px)`;
+  }
+  _chyronLastTs = ts;
+  _chyronRafId  = requestAnimationFrame(_chyronTick);
 }
 
-function _stepChyron(dir) {
-  _chyronIdx = (_chyronIdx + dir + _chyronItems.length) % _chyronItems.length;
-  _showChyronItem(_chyronIdx);
-  _resetChyronTimer();
+function _chyronSkip(dir) {
+  if (!_chyronItemXs.length) return;
+  const N = _chyronItems.length;
+  let curr = -1;
+  for (let i = 0; i < N; i++) {
+    if (_chyronItemXs[i] <= _chyronScrollX + 5) curr = i; else break;
+  }
+  const target = dir > 0 ? (curr + 1) % N : (curr <= 0 ? N - 1 : curr - 1);
+  _chyronScrollX = _chyronItemXs[target];
+  const t = document.getElementById('chyron-track');
+  if (t) t.style.transform = `translateX(-${_chyronScrollX}px)`;
 }
 
 function initChyron(items) {
-  _chyronItems = items.filter(x => _chyronLabel(x));
-  _chyronIdx   = 0;
+  _chyronItems  = items.filter(x => _chyronItemHtml(x));
+  _chyronScrollX = 0;
   const bar = document.getElementById('chyron-bar');
   if (!_chyronItems.length) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
-  _showChyronItem(0);
-  _resetChyronTimer();
+  _chyronRender();
+  if (_chyronRafId) cancelAnimationFrame(_chyronRafId);
+  _chyronLastTs = null;
+  _chyronRafId  = requestAnimationFrame(_chyronTick);
 }
 
-async function _chyronNavigate() {
-  const item = _chyronItems[_chyronIdx];
+async function _chyronNavigate(item) {
   if (!item) return;
   const chartSel  = document.getElementById('chart-select');
   const periodSel = document.getElementById('period-select');
-  const sameChart  = chartSel.value  === item.chart_key;
-  const samePeriod = periodSel.value === (item.period || 'all');
-  if (!sameChart || !samePeriod) {
+  const needsLoad = chartSel.value !== item.chart_key || periodSel.value !== (item.period || 'all');
+  if (needsLoad) {
     chartSel.value  = item.chart_key;
     periodSel.value = item.period || 'all';
     updateGenreTable(periodSel.value);
@@ -585,31 +635,26 @@ function _expandAndScrollToArtist(artist) {
     redrawPlots();
   }
   requestAnimationFrame(() => {
-    const rows = document.querySelectorAll('#combined-tbody tr[data-artist]');
-    for (const r of rows) {
-      if (r.dataset.artist === artist) {
-        r.scrollIntoView({behavior:'smooth', block:'center'});
-        break;
-      }
+    for (const r of document.querySelectorAll('#combined-tbody tr[data-artist]')) {
+      if (r.dataset.artist === artist) { r.scrollIntoView({behavior:'smooth', block:'center'}); break; }
     }
   });
 }
 
-document.getElementById('chyron-text').addEventListener('click', _chyronNavigate);
-document.getElementById('chyron-prev').addEventListener('click', e => { e.stopPropagation(); _stepChyron(-1); });
-document.getElementById('chyron-next').addEventListener('click', e => { e.stopPropagation(); _stepChyron(1); });
+document.getElementById('chyron-track').addEventListener('click', e => {
+  const el = e.target.closest('.chyron-item[data-idx]');
+  if (!el) return;
+  _chyronNavigate(_chyronItems[parseInt(el.dataset.idx) % _chyronItems.length]);
+});
+document.getElementById('chyron-prev').addEventListener('click', e => { e.stopPropagation(); _chyronSkip(-1); });
+document.getElementById('chyron-next').addEventListener('click', e => { e.stopPropagation(); _chyronSkip(1); });
 
-// Pause cycling on hover
 (function() {
   const bar = document.getElementById('chyron-bar');
-  bar.addEventListener('mouseenter', () => {
-    clearTimeout(_chyronTimer);
-    document.getElementById('chyron-progress').style.transition = 'none';
-  });
-  bar.addEventListener('mouseleave', () => { if (_chyronItems.length) _resetChyronTimer(); });
+  bar.addEventListener('mouseenter', () => { _chyronPaused = true; });
+  bar.addEventListener('mouseleave', () => { _chyronPaused = false; _chyronLastTs = null; });
 })();
 
-// Fetch latest_news.json on page load
 (async function() {
   try {
     const r = await fetch('data/latest_news.json');

@@ -468,13 +468,20 @@ def compute_weekly_news(timelines: dict, combined_table: list, latest_date: str,
             if rank > 50:
                 continue
             if artist not in prev_ranks:
+                t = 'top10_entry' if rank <= 10 else 'new_entry'
                 news.append({
-                    'type': 'new_entry', 'artist': artist, 'rank': rank,
+                    'type': t, 'artist': artist, 'rank': rank,
                     '_rank': rank,
                 })
             else:
                 change = prev_ranks[artist] - rank   # positive = moved up
-                if change >= 2:
+                if prev_ranks[artist] > 10 and rank <= 10:
+                    news.append({
+                        'type': 'top10_entry', 'artist': artist,
+                        'rank': rank, 'prev_rank': prev_ranks[artist], 'change': change,
+                        '_rank': rank,
+                    })
+                elif change >= 2:
                     news.append({
                         'type': 'rank_change', 'artist': artist,
                         'rank': rank, 'prev_rank': prev_ranks[artist], 'change': change,
@@ -482,7 +489,7 @@ def compute_weekly_news(timelines: dict, combined_table: list, latest_date: str,
                     })
 
     # ── Sort by interestingness ───────────────────────────────────────────────
-    _TYPE_ORDER = {'hhindex_change': 0, 'hindex_gain': 1, 'rank_change': 2, 'new_entry': 3}
+    _TYPE_ORDER = {'hhindex_change': 0, 'hindex_gain': 1, 'top10_entry': 2, 'rank_change': 3, 'new_entry': 4}
     news.sort(key=lambda x: (_TYPE_ORDER.get(x['type'], 9), x.get('_rank', 9999)))
     for item in news:
         item.pop('_rank', None)
@@ -1179,7 +1186,7 @@ def main():
     # Sort globally: h-h-index changes first, then h-index gains by artist rank,
     # then rank changes, then new entries.  Cap at 5 items per chart so no single
     # chart floods the chyron.
-    _TYPE_ORDER = {'hhindex_change': 0, 'hindex_gain': 1, 'rank_change': 2, 'new_entry': 3}
+    _TYPE_ORDER = {'hhindex_change': 0, 'hindex_gain': 1, 'top10_entry': 2, 'rank_change': 3, 'new_entry': 4}
     per_chart_counts: dict = {}
     sorted_news = sorted(all_news_items,
                          key=lambda x: (_TYPE_ORDER.get(x['type'], 9),
