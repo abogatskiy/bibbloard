@@ -14,8 +14,9 @@ deploy.sh
 
 # Generated chart data — produced by bibbloard.py from raw/ sources, not committed
 data/*.json
-# Except the snapshot that tracks week-over-week diffs for the news chyron
+# Except the files needed for the news chyron
 !data/prev_snapshot.json
+!data/latest_news.json
 output/
 
 # macOS
