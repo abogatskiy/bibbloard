@@ -221,10 +221,11 @@ thead th.sort-desc::after{content:' ▼';font-size:.6rem;color:var(--accent);opa
   display:inline-flex;align-items:center;
   white-space:nowrap;will-change:transform;cursor:pointer;
 }
-.chyron-item{display:inline-flex;align-items:center;gap:.28rem;padding:0 .6rem}
-.chyron-item:hover .ci-artist{opacity:.75}
-.ci-item-sep{color:#edc948;font-size:1rem;margin:0 .5rem;opacity:.7;user-select:none}
-.ci-sep  {color:rgba(255,255,255,.28);margin:0 .3rem;font-size:.75rem;user-select:none}
+.chyron-item{display:inline-flex;align-items:center;gap:.28rem;padding:.0rem .75rem}
+.chyron-item:hover{filter:brightness(1.15)}
+.chyron-item.ci-even{background:rgba(255,255,255,.06)}
+.chyron-item.ci-odd {background:rgba(255,255,255,.0)}
+.ci-sep{color:rgba(255,255,255,.22);margin:0 .2rem;font-size:.7rem;user-select:none}
 .ci-artist{font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:1rem;color:#fff;letter-spacing:.04em}
 .ci-metric{font-size:.63rem;color:rgba(255,255,255,.52);letter-spacing:.07em;text-transform:uppercase}
 .ci-value {font-family:'Bebas Neue','Impact','Arial Narrow',sans-serif;font-size:1rem;color:#fff;margin:0 .05rem}
@@ -560,8 +561,7 @@ function _chyronRender() {
   const track = document.getElementById('chyron-track');
   if (!track || !_chyronItems.length) return;
   const seg = _chyronItems.map((item, i) =>
-    `<span class="chyron-item" data-idx="${i}">${_chyronItemHtml(item)}</span>` +
-    `<span class="ci-item-sep" aria-hidden="true">&#11047;</span>`
+    `<span class="chyron-item ${i % 2 === 0 ? 'ci-even' : 'ci-odd'}" data-idx="${i}">${_chyronItemHtml(item)}</span>`
   ).join('');
   track.innerHTML = seg + seg;
   requestAnimationFrame(() => {
