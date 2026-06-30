@@ -641,6 +641,13 @@ function _expandAndScrollToArtist(artist) {
     renderTables();
     redrawPlots();
   }
+  // Ensure the artist's row is visible — they may be beyond the current _tableOffset
+  const rows = sortedRows(filterRows(buildCombinedTable(), _filterQuery.combined), _sortState.combined);
+  const idx = rows.findIndex(r => r[1] === artist);
+  if (idx >= 0 && idx >= _tableOffset) {
+    _tableOffset = idx + 1;
+    renderTables();
+  }
   requestAnimationFrame(() => {
     for (const r of document.querySelectorAll('#combined-tbody tr[data-artist]')) {
       if (r.dataset.artist === artist) { r.scrollIntoView({behavior:'smooth', block:'center'}); break; }
