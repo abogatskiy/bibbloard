@@ -408,6 +408,86 @@ def hh_index(ranking) -> int:
         else: break
     return h
 
+# ── Weekly news ───────────────────────────────────────────────────────────────
+
+def compute_weekly_news(timelines: dict, combined_table: list, latest_date: str,
+                        hhw: int, hhp: int, hhi: int, prev_snap: dict = None) -> list:
+    """
+    Return a list of newsworthy items for the latest chart week.
+
+    Sources:
+      - H-index gains: artists whose last timeline change-point date == latest_date
+      - H-H-index changes: compare hhw/hhp/hhi to prev_snap values
+      - Rank changes / new entries: compare combined_table ranks to prev_snap ranks
+    """
+    if not latest_date:
+        return []
+
+    news = []
+    curr_rank = {row[1]: row[0] for row in combined_table}
+
+    # ── H-index gains from timelines ─────────────────────────────────────────
+    for artist, tl in timelines.items():
+        for mk, mname in [('w', 'weeks'), ('p', 'peak'), ('i', 'integrated')]:
+            t = tl.get(mk)
+            if not t or not t.get('d'):
+                continue
+            last = len(t['d']) - 1
+            if t['d'][last] != latest_date:
+                continue
+            h_new  = t['h'][last]
+            h_prev = t['h'][last - 1] if last > 0 else 0
+            songs  = (t.get('s') or [[]])[last]
+            h_new_r  = round(h_new, 1)  if isinstance(h_new,  float) else h_new
+            h_prev_r = round(h_prev, 1) if isinstance(h_prev, float) else h_prev
+            news.append({
+                'type': 'hindex_gain', 'metric': mname,
+                'artist': artist,
+                'h': h_new_r, 'prev_h': h_prev_r,
+                'songs': songs,
+                '_rank': curr_rank.get(artist, 9999),
+            })
+
+    # ── H-H-index changes ─────────────────────────────────────────────────────
+    if prev_snap:
+        for mname, curr_val, snap_key in [
+            ('weeks', hhw, 'hhw'), ('peak', hhp, 'hhp'), ('integrated', hhi, 'hhi')
+        ]:
+            prev_val = prev_snap.get(snap_key)
+            if prev_val is not None and curr_val != prev_val:
+                news.append({
+                    'type': 'hhindex_change', 'metric': mname,
+                    'new_hh': curr_val, 'prev_hh': prev_val,
+                    '_rank': -1,
+                })
+
+    # ── Rank changes and new entries ──────────────────────────────────────────
+    if prev_snap and 'ranks' in prev_snap:
+        prev_ranks = prev_snap['ranks']
+        for artist, rank in curr_rank.items():
+            if rank > 50:
+                continue
+            if artist not in prev_ranks:
+                news.append({
+                    'type': 'new_entry', 'artist': artist, 'rank': rank,
+                    '_rank': rank,
+                })
+            else:
+                change = prev_ranks[artist] - rank   # positive = moved up
+                if change >= 2:
+                    news.append({
+                        'type': 'rank_change', 'artist': artist,
+                        'rank': rank, 'prev_rank': prev_ranks[artist], 'change': change,
+                        '_rank': rank,
+                    })
+
+    # ── Sort by interestingness ───────────────────────────────────────────────
+    _TYPE_ORDER = {'hhindex_change': 0, 'hindex_gain': 1, 'rank_change': 2, 'new_entry': 3}
+    news.sort(key=lambda x: (_TYPE_ORDER.get(x['type'], 9), x.get('_rank', 9999)))
+    for item in news:
+        item.pop('_rank', None)
+    return news
+
 # ── Rankings ───────────────────────────────────────────────────────────────────
 
 def compute_rankings(artist_songs: dict):
@@ -587,7 +667,8 @@ def curve_values(artist: str, artist_songs: dict, metric: str):
 def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_songs, hhw, hhp, hhi,
                         chart_size: int = 100, rows: list = None, latest_date: str = "",
                         period_since: str = None, tick_w=None, tick_p=None, tick_i=None,
-                        chart_sizes: dict = None, unified_cs: int = None) -> dict:
+                        chart_sizes: dict = None, unified_cs: int = None,
+                        prev_snap: dict = None) -> dict:
     def plot_data(ranking, metric, songs=None):
         if songs is None: songs = artist_songs
         out = []
@@ -802,10 +883,14 @@ def build_chart_payload(weeks_ranking, peak_ranking, integrated_ranking, artist_
             "intSongPos":       u_int_song_pos,
         }
 
+    weekly_news = compute_weekly_news(
+        timelines, combined_table, latest_date, hhw, hhp, hhi, prev_snap)
+
     return {
         "hhw": hhw, "hhp": hhp, "hhi": hhi,
         "chart_size": chart_size,
         "latest_date": latest_date,
+        "weeklyNews": weekly_news,
         "weeks":      plot_data(weeks_ranking,      "weeks"),
         "peak":       plot_data(peak_ranking,        "peak"),
         "integrated": plot_data(integrated_ranking,  "integrated"),
@@ -935,6 +1020,15 @@ def main():
         for _, period_since in PERIODS:
             total_ticks += 3 * _count_artists(rows, period_since)
 
+    # ── Load previous snapshot for weekly-news diffs ─────────────────────────
+    _snap_path = DATA_DIR / "prev_snapshot.json"
+    try:
+        prev_snapshot: dict = json.loads(_snap_path.read_text()) if _snap_path.exists() else {}
+    except Exception:
+        prev_snapshot = {}
+    new_snapshot:  dict = {}
+    all_news_items: list = []   # collected for latest_news.json
+
     # ── Main computation loop with progress bar ───────────────────────────────
     progress = Progress(total_ticks)
     # Shared label state — updated just before each compute_artist_timelines call
@@ -967,18 +1061,28 @@ def main():
             hhw         = hh_index(wr)
             hhp         = hh_index(pr)
             hhi         = hh_index(ir)
-            fname   = "hot100.json" if period_key == "all" else f"hot100_{period_key}.json"
-            payload = build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
-                                          rows=hot100_rows, latest_date=hot100_max,
-                                          period_since=period_since,
-                                          tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
-                                          chart_sizes=hot100_chart_sizes, unified_cs=100)
+            fname    = "hot100.json" if period_key == "all" else f"hot100_{period_key}.json"
+            snap_key = f"hot100_{period_key}"
+            payload  = build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
+                                           rows=hot100_rows, latest_date=hot100_max,
+                                           period_since=period_since,
+                                           tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
+                                           chart_sizes=hot100_chart_sizes, unified_cs=100,
+                                           prev_snap=prev_snapshot.get(snap_key))
             save_chart_data(payload, DATA_DIR / fname)
             hot100_periods[period_key] = {
                 "hhw": hhw, "hhp": hhp, "hhi": hhi,
                 "u_hhp": payload["u"].get("hhp", hhp),
                 "u_hhi": payload["u"].get("hhi", hhi),
             }
+            new_snapshot[snap_key] = {
+                "hhw": hhw, "hhp": hhp, "hhi": hhi,
+                "ranks": {row[1]: row[0] for row in payload["combinedTable"][:100]},
+            }
+            if period_key == "all":
+                for item in payload.get("weeklyNews", []):
+                    all_news_items.append(
+                        dict(item, chart_key="hot100", period="all", chart_label="Hot 100"))
 
         # ── Genre charts ─────────────────────────────────────────────────────
         genre_summary: list = []
@@ -1003,15 +1107,24 @@ def main():
                 _, u_pr, u_ir = compute_rankings(u_songs)
                 u_hhp = hh_index(u_pr)
                 u_hhi = hh_index(u_ir)
-                payload = build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
-                                              rows=None, latest_date=genre_max,
-                                              period_since=None,
-                                              chart_sizes=gchart_sizes, unified_cs=100)
+                snap_key = f"{key}_all"
+                payload  = build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
+                                               rows=None, latest_date=genre_max,
+                                               period_since=None,
+                                               chart_sizes=gchart_sizes, unified_cs=100,
+                                               prev_snap=prev_snapshot.get(snap_key))
                 save_chart_data(payload, DATA_DIR / f"{key}.json")
                 genre_periods["all"] = {
                     "hhw": hhw, "hhp": hhp, "hhi": hhi,
                     "u_hhp": u_hhp, "u_hhi": u_hhi,
                 }
+                new_snapshot[snap_key] = {
+                    "hhw": hhw, "hhp": hhp, "hhi": hhi,
+                    "ranks": {row[1]: row[0] for row in payload["combinedTable"][:100]},
+                }
+                for item in payload.get("weeklyNews", []):
+                    all_news_items.append(
+                        dict(item, chart_key=key, period="all", chart_label=genre_name))
             else:
                 for period_key, period_since in PERIODS:
                     _lbl["period"] = period_key
@@ -1024,18 +1137,28 @@ def main():
                     hhw         = hh_index(wr)
                     hhp         = hh_index(pr)
                     hhi         = hh_index(ir)
-                    fname   = f"{key}.json" if period_key == "all" else f"{key}_{period_key}.json"
-                    payload = build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
-                                                  rows=genre_rows, latest_date=genre_max,
-                                                  period_since=period_since,
-                                                  tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
-                                                  chart_sizes=gchart_sizes, unified_cs=100)
+                    fname    = f"{key}.json" if period_key == "all" else f"{key}_{period_key}.json"
+                    snap_key = f"{key}_{period_key}"
+                    payload  = build_chart_payload(wr, pr, ir, artist_songs, hhw, hhp, hhi, cs,
+                                                   rows=genre_rows, latest_date=genre_max,
+                                                   period_since=period_since,
+                                                   tick_w=tick_w, tick_p=tick_p, tick_i=tick_i,
+                                                   chart_sizes=gchart_sizes, unified_cs=100,
+                                                   prev_snap=prev_snapshot.get(snap_key))
                     save_chart_data(payload, DATA_DIR / fname)
                     genre_periods[period_key] = {
                         "hhw": hhw, "hhp": hhp, "hhi": hhi,
                         "u_hhp": payload["u"].get("hhp", hhp),
                         "u_hhi": payload["u"].get("hhi", hhi),
                     }
+                    new_snapshot[snap_key] = {
+                        "hhw": hhw, "hhp": hhp, "hhi": hhi,
+                        "ranks": {row[1]: row[0] for row in payload["combinedTable"][:100]},
+                    }
+                    if period_key == "all":
+                        for item in payload.get("weeklyNews", []):
+                            all_news_items.append(
+                                dict(item, chart_key=key, period="all", chart_label=genre_name))
 
             cs_vals  = list(gchart_sizes.values())
             cs_lo, cs_hi = (min(cs_vals), max(cs_vals)) if cs_vals else (100, 100)
@@ -1051,6 +1174,37 @@ def main():
         sys.exit(1)
 
     progress.finish("All chart files written")
+
+    # ── Save weekly news and snapshot ─────────────────────────────────────────
+    # Sort globally: h-h-index changes first, then h-index gains by artist rank,
+    # then rank changes, then new entries.  Cap at 5 items per chart so no single
+    # chart floods the chyron.
+    _TYPE_ORDER = {'hhindex_change': 0, 'hindex_gain': 1, 'rank_change': 2, 'new_entry': 3}
+    per_chart_counts: dict = {}
+    sorted_news = sorted(all_news_items,
+                         key=lambda x: (_TYPE_ORDER.get(x['type'], 9),
+                                        x.get('rank', x.get('_rank', 9999))))
+    latest_news: list = []
+    for item in sorted_news:
+        ck = item.get('chart_key', '')
+        if per_chart_counts.get(ck, 0) >= 5:
+            continue
+        per_chart_counts[ck] = per_chart_counts.get(ck, 0) + 1
+        latest_news.append(item)
+        if len(latest_news) >= 40:
+            break
+
+    for path, data in [
+        (DATA_DIR / "latest_news.json", latest_news),
+        (_snap_path, new_snapshot),
+    ]:
+        tmp = path.with_suffix('.tmp')
+        try:
+            tmp.write_text(json.dumps(data, separators=(',', ':')), encoding='utf-8')
+            os.replace(tmp, path)
+        except Exception:
+            tmp.unlink(missing_ok=True)
+            raise
 
     # ── Genre summary ─────────────────────────────────────────────────────────
     h100_cs = list(hot100_chart_sizes.values())

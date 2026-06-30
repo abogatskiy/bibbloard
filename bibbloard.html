@@ -203,6 +203,46 @@ thead th.sort-desc::after{content:' ▼';font-size:.6rem;color:var(--accent);opa
 }
 .tl-sigma-lbl{min-width:4rem;color:var(--muted);font-size:.74rem}
 
+/* ── News chyron ─────────────────────────────────────────────────────────── */
+#chyron-bar{
+  display:flex;align-items:center;gap:.5rem;
+  margin-top:.5rem;padding:.3rem .55rem;
+  background:var(--surface);border:1px solid var(--border);border-radius:4px;
+  font-size:.78rem;min-height:2rem;position:relative;overflow:hidden;
+}
+.chyron-dot{
+  flex-shrink:0;width:6px;height:6px;border-radius:50%;
+  background:#e15759;animation:chyron-pulse 1.6s ease-in-out infinite;
+}
+@keyframes chyron-pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.chyron-badge{
+  flex-shrink:0;font-size:.63rem;font-weight:bold;
+  text-transform:uppercase;letter-spacing:.08em;
+  color:var(--bg);background:var(--accent);
+  padding:.12rem .42rem;border-radius:3px;white-space:nowrap;
+}
+#chyron-text{
+  flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;color:var(--text);transition:color .12s;
+}
+#chyron-text:hover{color:var(--accent)}
+.chyron-nav{
+  flex-shrink:0;display:flex;align-items:center;gap:.22rem;
+  color:var(--muted);font-size:.72rem;
+}
+.chyron-btn{
+  background:none;border:1px solid var(--border);border-radius:3px;
+  padding:.06rem .32rem;cursor:pointer;color:var(--muted);
+  font-size:.82rem;line-height:1.2;
+  transition:color .12s,border-color .12s;
+}
+.chyron-btn:hover{color:var(--text);border-color:var(--muted)}
+#chyron-counter{min-width:2.4rem;text-align:center;font-size:.7rem}
+#chyron-progress{
+  position:absolute;bottom:0;left:0;height:2px;
+  background:var(--accent);opacity:.35;width:0%;
+}
+
 /* ── Load more ────────────────────────────────────────────────────────────── */
 .load-more-wrap{text-align:center;margin:1rem 0 2.5rem}
 #load-more-btn{
@@ -270,6 +310,18 @@ footer{
       <label style="display:flex;align-items:center;gap:.3rem;cursor:pointer;font-size:.84rem;color:var(--muted);margin-left:.4rem" title="Treat all charts as 100 entries wide for fair cross-chart comparison">
         <input type="checkbox" id="unified-cs"> Unified cs&nbsp;(100)
       </label>
+    </div>
+    <!-- News chyron -->
+    <div id="chyron-bar" style="display:none">
+      <span class="chyron-dot"></span>
+      <span class="chyron-badge">This week</span>
+      <div id="chyron-text" title="Click to view chart"></div>
+      <div class="chyron-nav">
+        <button class="chyron-btn" id="chyron-prev" title="Previous">&#8249;</button>
+        <span id="chyron-counter"></span>
+        <button class="chyron-btn" id="chyron-next" title="Next">&#8250;</button>
+      </div>
+      <div id="chyron-progress"></div>
     </div>
   </div>
   <div class="section-title" style="margin-top:1rem">Genre H-H-Index Ranking</div>
@@ -432,6 +484,138 @@ function plotColors() {
     font: s.getPropertyValue('--plot-font').trim(),
   };
 }
+
+// ── News chyron ───────────────────────────────────────────────────────────────
+let _chyronItems  = [];
+let _chyronIdx    = 0;
+let _chyronTimer  = null;
+let _pendingChyronArtist = null;
+const CHYRON_MS   = 6000;
+
+function _chyronLabel(item) {
+  const chart = item.chart_label || '';
+  switch (item.type) {
+    case 'hindex_gain': {
+      const ml = item.metric === 'weeks' ? 'Weeks' : item.metric === 'peak' ? 'Peak' : 'Integrated';
+      const hd = item.metric === 'integrated' ? (+item.h).toFixed(1) : item.h;
+      let t = `${item.artist}'s ${ml} h-index reached ${hd} on ${chart}`;
+      if (item.songs && item.songs.length) {
+        t += ` — “${item.songs[0]}”`;
+        if (item.songs.length > 1) t += ` +${item.songs.length - 1} more`;
+      }
+      return t;
+    }
+    case 'hhindex_change': {
+      const ml  = item.metric === 'weeks' ? 'Weeks' : item.metric === 'peak' ? 'Peak' : 'Integrated';
+      const dir = item.new_hh > item.prev_hh ? 'rose to' : 'fell to';
+      return `${chart} ${ml} H-H-Index ${dir} ${item.new_hh} (was ${item.prev_hh})`;
+    }
+    case 'rank_change':
+      return `${item.artist} climbed to #${item.rank} on ${chart} (was #${item.prev_rank})`;
+    case 'new_entry':
+      return `${item.artist} enters the ${chart} rankings at #${item.rank}`;
+    default:
+      return '';
+  }
+}
+
+function _showChyronItem(idx) {
+  const item = _chyronItems[idx];
+  if (!item) return;
+  const label = _chyronLabel(item);
+  if (!label) return;
+  document.getElementById('chyron-text').textContent = label;
+  document.getElementById('chyron-counter').textContent = `${idx + 1} / ${_chyronItems.length}`;
+}
+
+function _resetChyronTimer() {
+  clearTimeout(_chyronTimer);
+  const prog = document.getElementById('chyron-progress');
+  prog.style.transition = 'none';
+  prog.style.width = '0%';
+  // Double rAF so transition takes effect after the style resets
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    prog.style.transition = `width ${CHYRON_MS}ms linear`;
+    prog.style.width = '100%';
+  }));
+  _chyronTimer = setTimeout(() => _stepChyron(1), CHYRON_MS);
+}
+
+function _stepChyron(dir) {
+  _chyronIdx = (_chyronIdx + dir + _chyronItems.length) % _chyronItems.length;
+  _showChyronItem(_chyronIdx);
+  _resetChyronTimer();
+}
+
+function initChyron(items) {
+  _chyronItems = items.filter(x => _chyronLabel(x));
+  _chyronIdx   = 0;
+  const bar = document.getElementById('chyron-bar');
+  if (!_chyronItems.length) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  _showChyronItem(0);
+  _resetChyronTimer();
+}
+
+async function _chyronNavigate() {
+  const item = _chyronItems[_chyronIdx];
+  if (!item) return;
+  const chartSel  = document.getElementById('chart-select');
+  const periodSel = document.getElementById('period-select');
+  const sameChart  = chartSel.value  === item.chart_key;
+  const samePeriod = periodSel.value === (item.period || 'all');
+  if (!sameChart || !samePeriod) {
+    chartSel.value  = item.chart_key;
+    periodSel.value = item.period || 'all';
+    updateGenreTable(periodSel.value);
+    if (item.artist) _pendingChyronArtist = item.artist;
+    await loadChart();
+  } else if (item.artist) {
+    _expandAndScrollToArtist(item.artist);
+  }
+  document.getElementById('chart-heading').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function _expandAndScrollToArtist(artist) {
+  if (!_currentData?.timelines?.[artist]) return;
+  const key = artist + '|combined';
+  if (!_expandedArtists.has(key)) {
+    _expandedArtists.add(key);
+    renderTables();
+    redrawPlots();
+  }
+  requestAnimationFrame(() => {
+    const rows = document.querySelectorAll('#combined-tbody tr[data-artist]');
+    for (const r of rows) {
+      if (r.dataset.artist === artist) {
+        r.scrollIntoView({behavior:'smooth', block:'center'});
+        break;
+      }
+    }
+  });
+}
+
+document.getElementById('chyron-text').addEventListener('click', _chyronNavigate);
+document.getElementById('chyron-prev').addEventListener('click', e => { e.stopPropagation(); _stepChyron(-1); });
+document.getElementById('chyron-next').addEventListener('click', e => { e.stopPropagation(); _stepChyron(1); });
+
+// Pause cycling on hover
+(function() {
+  const bar = document.getElementById('chyron-bar');
+  bar.addEventListener('mouseenter', () => {
+    clearTimeout(_chyronTimer);
+    document.getElementById('chyron-progress').style.transition = 'none';
+  });
+  bar.addEventListener('mouseleave', () => { if (_chyronItems.length) _resetChyronTimer(); });
+})();
+
+// Fetch latest_news.json on page load
+(async function() {
+  try {
+    const r = await fetch('data/latest_news.json');
+    if (r.ok) initChyron(await r.json());
+  } catch (_) {}
+})();
 
 // ── Genre table ───────────────────────────────────────────────────────────────
 function selectChart(key) {
@@ -1300,6 +1484,11 @@ function renderChart(data) {
   redrawPlots();   // also sets _intSongPos and peak-desc
   renderTables();
   updateGenreTable(document.getElementById('period-select').value);
+  if (_pendingChyronArtist) {
+    const artist = _pendingChyronArtist;
+    _pendingChyronArtist = null;
+    requestAnimationFrame(() => _expandAndScrollToArtist(artist));
+  }
 }
 
 // ── Fetch and render ──────────────────────────────────────────────────────────
