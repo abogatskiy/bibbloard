@@ -4,16 +4,32 @@ on:
   schedule:
     - cron: '0 22 * * 5'  # Every Friday at 22:00 UTC (6pm ET / 3pm PT)
   workflow_dispatch:        # Manual trigger from GitHub Actions UI
+    inputs:
+      deploy_only:
+        description: 'Skip the scrape and redeploy the current GHCR image to the Pi'
+        type: boolean
+        default: false
+
+# Never let two refreshes race on pushes to main
+concurrency:
+  group: weekly-refresh
+  cancel-in-progress: false
 
 jobs:
-  refresh-and-deploy:
+  refresh:
+    if: ${{ !inputs.deploy_only }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
 
     steps:
+      # Check out the branch tip, not the triggering SHA, so re-runs can push
       - name: Check out repo
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -71,10 +87,16 @@ jobs:
           push: true
           tags: ghcr.io/abogatskiy/bibbloard:latest
 
+  # Separate job so a failed deploy can be re-run without re-scraping
+  deploy:
+    needs: refresh
+    if: ${{ always() && (inputs.deploy_only || (needs.refresh.result == 'success' && needs.refresh.outputs.changed == 'true')) }}
+    runs-on: ubuntu-latest
+
+    steps:
       # Connect to Tailscale so we can reach the Pi
       - name: Connect to Tailscale
-        if: steps.commit.outputs.changed == 'true'
-        uses: tailscale/github-action@v2
+        uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
@@ -83,7 +105,6 @@ jobs:
 
       # Pull new image on Pi and restart the container
       - name: Deploy to Pi
-        if: steps.commit.outputs.changed == 'true'
         run: |
           echo "${{ secrets.PI_SSH_KEY }}" > /tmp/pi_key
           chmod 600 /tmp/pi_key
