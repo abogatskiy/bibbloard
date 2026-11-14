@@ -20,6 +20,7 @@ import csv
 import datetime
 import json
 import os
+import re
 import sys
 import time
 import urllib.request
@@ -50,6 +51,53 @@ def _patched_session(max_retries):
     return session
 
 billboard._get_session_with_retries = _patched_session
+
+# ── Patch billboard.py's row parser ────────────────────────────────────────────
+# Billboard's Sept 2026 redesign added a "WEEKS AT NO. 1" column and a labeled
+# stats block, which breaks billboard.py's fixed column offsets. Read the stats
+# by their labels ("LW 3 PEAK 2 WEEKS ON CHART 30") instead.
+_STAT_RE = re.compile(r"\bLW\s+(\S+)\s+PEAK\s+(\S+).*?\bWEEKS ON CHART\s+(\S+)")
+
+def _stat_int(value, if_no_value):
+    return int(value) if value.isdigit() else if_no_value
+
+def _parse_new_style_page(self, soup):
+    date_element = soup.select_one("#chart-date-picker")
+    if date_element:
+        self.date = date_element["data-date"]
+    self.previousDate = None
+    self.nextDate = None
+
+    for row in soup.select("ul.o-chart-results-list-row"):
+        cells = row.select("li")
+        title_el = cells[3].select_one("#title-of-a-story")
+        artist_el = cells[3].select_one("#title-of-a-story + span.c-label")
+        rank_el = cells[0].select_one("span.c-label")
+        if not (title_el and rank_el):
+            raise billboard.BillboardParseException("Failed to parse title/rank")
+        title = title_el.text.strip()
+        artist = artist_el.text.strip() if artist_el else ""
+        if artist == "":                     # artist charts like the Artist 100
+            title, artist = artist, title
+        image_el = row.select_one("li:nth-child(2) img")
+        image = image_el.get("data-lazy-src") if image_el else None
+
+        peak = last = weeks = None
+        is_new = False
+        if self.date:
+            text = " ".join(row.get_text(" ", strip=True).split())
+            m = _STAT_RE.search(text)
+            if not m:
+                raise billboard.BillboardParseException("Failed to parse stats block")
+            last = _stat_int(m.group(1), 0)
+            peak = _stat_int(m.group(2), None)
+            weeks = _stat_int(m.group(3), 1)
+            is_new = weeks == 1
+
+        self.entries.append(billboard.ChartEntry(
+            title, artist, image, peak, last, weeks, int(rank_el.text.strip()), is_new))
+
+billboard.ChartData._parseNewStylePage = _parse_new_style_page
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 
@@ -82,6 +130,10 @@ DELAY_BACKOFF = 2.0    # multiply on rate-limit hit
 DELAY_RECOVER = 0.85   # multiply on success (gradual recovery)
 MAX_RETRIES   = 3
 RETRY_DELAY   = 15.0   # seconds before retry on transient error
+MAX_CONSECUTIVE_ERRORS = 3   # give up on a chart after this many failed weeks in a row
+
+# Charts that hit MAX_CONSECUTIVE_ERRORS this run; main() exits non-zero if any
+FAILED_CHARTS = []
 
 # Earliest date reachable via billboard.py scraper for each chart
 CHART_EARLIEST = {
@@ -174,6 +226,9 @@ def fetch_with_retry(slug: str, date: datetime.date, retries: int = MAX_RETRIES)
             msg = str(e)
             # Rate-limiting — don't retry, let caller back off
             if "403" in msg or "429" in msg:
+                raise
+            # Parse errors are deterministic — retrying only wastes time
+            if isinstance(e, billboard.BillboardParseException):
                 raise
             if attempt < retries:
                 print(f"    ⚠ attempt {attempt} failed ({e}), retrying in {RETRY_DELAY}s…")
@@ -549,12 +604,14 @@ def fetch_chart(name: str, slug: str, filename: str,
     errors       = 0
     total_entries = 0
     progress     = Progress(len(week_dates))
+    consecutive_errors = 0
 
     for i, week_date in enumerate(week_dates):
         try:
             chart_data = fetch_with_retry(slug, week_date)
             actual, n  = append_rows(csv_path, chart_data, existing)
 
+            consecutive_errors = 0
             if n:
                 added += 1
                 total_entries += n
@@ -580,7 +637,12 @@ def fetch_chart(name: str, slug: str, filename: str,
                 continue
             else:
                 errors += 1
-                progress.interrupt(f"  ✗ {week_date}: {e}")
+                consecutive_errors += 1
+                progress.interrupt(f"  ✗ {week_date}: {type(e).__name__}: {e}")
+                if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+                    progress.interrupt(f"  ✗ {name}: {consecutive_errors} failures in a row — giving up on this chart")
+                    FAILED_CHARTS.append(f"{name}: {type(e).__name__}: {e}")
+                    break
 
         if delay > 0 and i < len(week_dates) - 1:
             time.sleep(delay)
@@ -632,6 +694,12 @@ def main():
         print(f"All done. {total_written:,} total entries written.")
     else:
         print("All selected charts are up to date.")
+
+    if FAILED_CHARTS:
+        print(f"\n✗ {len(FAILED_CHARTS)} chart(s) failed:")
+        for failure in FAILED_CHARTS:
+            print(f"    {failure}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
