@@ -24,8 +24,11 @@ from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
 
-import fetch_genre_updates as fgu  # applies the patched billboard.py parser
 import billboard
+# Keep billboard.py's own parser for pages archived before Billboard's
+# Sept 2026 redesign; importing fetch_genre_updates replaces it.
+_PRE_REDESIGN_PARSER = billboard.ChartData._parseNewStylePage
+import fetch_genre_updates as fgu  # applies the patched billboard.py parser
 
 CSV_PATH  = fgu.RAW_DIR / "alternative.csv"
 SLUG      = "alternative-songs"
@@ -73,8 +76,13 @@ def missing_weeks(rows):
 
 
 def parse_page(html):
+    soup = BeautifulSoup(html, "html.parser")
     chart = billboard.ChartData(SLUG, fetch=False)
-    chart._parsePage(BeautifulSoup(html, "html.parser"))
+    try:
+        chart._parsePage(soup)
+    except billboard.BillboardParseException:
+        chart = billboard.ChartData(SLUG, fetch=False)
+        _PRE_REDESIGN_PARSER(chart, soup)
     return chart
 
 
