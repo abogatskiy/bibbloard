@@ -29,7 +29,7 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -40,6 +40,7 @@ jobs:
         run: pip3 install billboard.py
 
       - name: Fetch latest chart data
+        timeout-minutes: 15  # a healthy run takes ~1 min
         run: python3 fetch_genre_updates.py --all
 
       - name: Regenerate JSON data
