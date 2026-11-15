@@ -506,6 +506,8 @@ let _chyronRafId   = null;
 let _chyronLastTs  = null;
 let _pendingChyronArtist = null;
 const CHYRON_SPEED = 55;
+const CHYRON_RESUME_MS = 3000;  // resume scrolling this long after the last prev/next use
+let _chyronResumeTimer = null;
 
 function _chyronItemHtml(item) {
   const chart = `<span class="ci-chart">${escHtml((item.chart_label || '').toUpperCase())}</span>`;
@@ -602,6 +604,20 @@ function _chyronSkip(dir) {
   _chyronScrollX = _chyronItemXs[target];
   const t = document.getElementById('chyron-track');
   if (t) t.style.transform = `translateX(-${_chyronScrollX}px)`;
+  _chyronHoldThenResume();
+}
+
+// Hold the ticker after prev/next, then resume once the pointer has been still
+// for CHYRON_RESUME_MS — even while it is still over the bar (and on touch
+// screens, where no mouseleave ever comes to unpause it).
+function _chyronHoldThenResume() {
+  _chyronPaused = true;
+  clearTimeout(_chyronResumeTimer);
+  _chyronResumeTimer = setTimeout(() => {
+    _chyronResumeTimer = null;
+    _chyronPaused = false;
+    _chyronLastTs = null;
+  }, CHYRON_RESUME_MS);
 }
 
 function initChyron(items) {
@@ -666,7 +682,14 @@ document.getElementById('chyron-next').addEventListener('click', e => { e.stopPr
 (function() {
   const bar = document.getElementById('chyron-bar');
   bar.addEventListener('mouseenter', () => { _chyronPaused = true; });
-  bar.addEventListener('mouseleave', () => { _chyronPaused = false; _chyronLastTs = null; });
+  bar.addEventListener('mouseleave', () => {
+    clearTimeout(_chyronResumeTimer);
+    _chyronResumeTimer = null;
+    _chyronPaused = false;
+    _chyronLastTs = null;
+  });
+  // Moving the pointer after prev/next restarts the 3 s countdown
+  bar.addEventListener('mousemove', () => { if (_chyronResumeTimer) _chyronHoldThenResume(); });
 })();
 
 (async function() {
